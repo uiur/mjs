@@ -4,8 +4,40 @@
 #include <string.h>
 #include <ctype.h>
 
+Value* console_log(int size, Value **args) {
+  for (int i = 0; i < size; i++) {
+    double n = args[i]->value;
+    printf("%.0f\n", n);
+  }
+}
 
-Value* value_number_add(Value* left, Value* right) {
+Value* value_number_subtract(int size, Value **args) {
+  if (size != 2) {
+    fprintf(stderr, "requires %d arguments, but %d\n", 2, size);
+    abort();
+  }
+
+  Value *left = args[0];
+  Value *right = args[1];
+
+  double sum = left->value - right->value;
+
+  Value *number = malloc(sizeof(Value));
+  number->type = VALUE_NUMBER;
+  number->value = sum;
+
+  return number;
+}
+
+Value* value_number_add(int size, Value **args) {
+  if (size != 2) {
+    fprintf(stderr, "requires %d arguments, but %d\n", 2, size);
+    abort();
+  }
+
+  Value *left = args[0];
+  Value *right = args[1];
+
   double sum = left->value + right->value;
 
   Value *number = malloc(sizeof(Value));
@@ -46,15 +78,15 @@ Value* evaluate(Node *node) {
       }
 
       if (strcmp(identifier, "log") == 0) {
-        for (int i = 0; i < size; i++) {
-          printf("%f\n", args[i]->value);
-        }
-
-        return NULL;
+        return console_log(size, args);
       }
 
       if (strcmp(identifier, "+") == 0) {
-        return value_number_add(args[0], args[1]);
+        return value_number_add(size, args);
+      }
+
+      if (strcmp(identifier, "-") == 0) {
+        return value_number_subtract(size, args);
       }
 
       fprintf(stderr, "runtime error: `%s` is not defined\n", identifier);
@@ -72,7 +104,7 @@ Value* evaluate(Node *node) {
 }
 
 int main(int argc, char const **argv) {
-  char *source = "log(2 + 3);";
+  char *source = "log(2 + 3 + 3 - 2);";
   Token *token = tokenize(source);
   token_pp(token);
   Node *node = parse(token);
