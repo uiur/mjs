@@ -55,15 +55,6 @@ typedef struct Token {
   struct Token *next;
 } Token;
 
-typedef enum ValueType {
-  VALUE_NUMBER,
-} ValueType;
-
-typedef struct Value {
-  ValueType type;
-  double value;
-} Value;
-
 Token* tokenize(char *source);
 void token_pp(Token* token);
 
