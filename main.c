@@ -4,6 +4,17 @@
 #include <string.h>
 #include <ctype.h>
 
+
+Value* value_number_add(Value* left, Value* right) {
+  double sum = left->value + right->value;
+
+  Value *number = malloc(sizeof(Value));
+  number->type = VALUE_NUMBER;
+  number->value = sum;
+
+  return number;
+}
+
 Value* evaluate(Node *node) {
   switch (node->type) {
     case NODE_PROGRAM: {
@@ -22,6 +33,7 @@ Value* evaluate(Node *node) {
       return number;
     }
 
+    case NODE_BINARY_OPERATOR:
     case NODE_FUNCTION_CALL: {
       char *identifier = node->value;
 
@@ -37,7 +49,15 @@ Value* evaluate(Node *node) {
         for (int i = 0; i < size; i++) {
           printf("%f\n", args[i]->value);
         }
+
+        return NULL;
       }
+
+      if (strcmp(identifier, "+") == 0) {
+        return value_number_add(args[0], args[1]);
+      }
+
+      fprintf(stderr, "runtime error: `%s` is not defined\n", identifier);
 
       break;
     }
@@ -52,9 +72,9 @@ Value* evaluate(Node *node) {
 }
 
 int main(int argc, char const **argv) {
-  char *source = "log(23);";
+  char *source = "log(2 + 3);";
   Token *token = tokenize(source);
-  // token_pp(token);
+  token_pp(token);
   Node *node = parse(token);
   node_pp(node);
   printf("\n");

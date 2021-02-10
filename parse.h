@@ -46,6 +46,7 @@ typedef enum TokenType {
   TOKEN_ANY,
   TOKEN_NUMBER,
   TOKEN_IDENTIFIER,
+  TOKEN_SYMBOL,
 } TokenType;
 
 typedef struct Token {

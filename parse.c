@@ -4,12 +4,22 @@
 #include <string.h>
 #include <ctype.h>
 
+char *token_symbols[] = {
+  "+",
+  "-",
+  NULL,
+};
+
 Token* tokenize(char *source) {
   char *current = source;
   Token *head = malloc(sizeof(Token));
   Token *prev_token = head;
 
   while (*current != '\0') {
+    if (isspace(*current)) {
+      current++;
+      continue;
+    }
     Token *token = malloc(sizeof(Token));
     token->type = TOKEN_ANY;
 
@@ -20,6 +30,16 @@ Token* tokenize(char *source) {
     } else if (isdigit(*current)) {
       token->type = TOKEN_NUMBER;
       for (; current[size] != '\0' && isdigit(current[size]); size++) ;
+    } else {
+      for (int i = 0; token_symbols[i] != NULL; i++) {
+        char *symbol = token_symbols[i];
+        int symbol_length = strlen(symbol);
+        if (strncmp(symbol, current, symbol_length) == 0) {
+          size = symbol_length;
+          token->type = TOKEN_SYMBOL;
+          break;
+        }
+      }
     }
 
     token->value = calloc(size + 1, sizeof(char));
@@ -43,7 +63,7 @@ void token_pp(Token* token) {
 
 // program := statement*
 // statement := expression ';'
-// expression := term (op term)*
+// expression := term (op expression)?
 // term := function_call | primary
 // function_call := identifier '(' (expression (',' expression)*)?')'
 // primary := '(' expression ')' | identifier | number_constant | string_constant
@@ -61,7 +81,7 @@ void parse_state_next(ParseState *state) {
 
 void parse_state_expect(ParseState *state, char *str) {
   if (strcmp(state->token->value, str) != 0) {
-    fprintf(stderr, "parse error: expect `%s`, but got `%s`", str, state->token->value);
+    fprintf(stderr, "parse error: expect `%s`, but got `%s`\n", str, state->token->value);
     abort();
     return;
   }
@@ -93,16 +113,19 @@ Node* parse_function_call(ParseState *state) {
       node->type = NODE_FUNCTION_CALL;
       node->value = current->value;
 
-      int size = 1;
-      node->children = malloc((size + 1) * sizeof(Node*));
-      node->children[size] = NULL;
-
       parse_state_next(state);
       parse_state_next(state);
 
-      Node *expression = parse_expression(state);
-      if (expression != NULL) {
-        node->children[0] = expression;
+      int i = 0;
+      while(1) {
+        Node *expression = parse_expression(state);
+        if (expression == NULL) break;
+
+        int size = i + 1;
+        node->children = realloc(node->children, (size + 1) * sizeof(Node*));
+        node->children[i] = expression;
+        node->children[size] = NULL;
+        i++;
       }
 
       parse_state_expect(state, ")");
@@ -121,7 +144,7 @@ Node* parse_function_call(ParseState *state) {
   return NULL;
 }
 
-Node* parse_expression(ParseState *state) {
+Node* parse_term(ParseState *state) {
   Node *node;
 
   node = parse_function_call(state);
@@ -131,6 +154,28 @@ Node* parse_expression(ParseState *state) {
   if (node != NULL) return node;
 
   return NULL;
+}
+
+Node* parse_expression(ParseState *state) {
+  Node *term = parse_term(state);
+
+  if (state->token->type != TOKEN_SYMBOL) return term;
+
+  char *symbol = state->token->value;
+  parse_state_next(state);
+  Node *expression = parse_expression(state);
+
+  Node *node = malloc(sizeof(Node));
+  node->type = NODE_BINARY_OPERATOR;
+  node->value = symbol;
+
+  int size = 2;
+  node->children = malloc((size + 1) * sizeof(Node*));
+  node->children[0] = term;
+  node->children[1] = expression;
+  node->children[size] = NULL;
+
+  return node;
 }
 
 Node* parse_statement(ParseState *state) {
