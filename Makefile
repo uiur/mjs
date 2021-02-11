@@ -1,17 +1,26 @@
-OBJECTS = parse.o value.o
+DIR = build
+OBJECTS = $(addprefix $(DIR)/,parse.o value.o hash.o)
 CFLAGS = -g
+MAIN = $(DIR)/main
+TEST = $(DIR)/test
 
-main: main.c $(OBJECTS)
-test: test.c $(OBJECTS)
-parse.o: parse.c
-value.o: value.c
+$(MAIN): $(OBJECTS)
+$(TEST): $(OBJECTS)
 
-.PHONY: run_test debug_test clean
-run_test: test
-	./test
+$(DIR)/%.o : %.c $(DIR)
+	$(CC) -c $(CFLAGS) $< -o $@
 
-debug_test: test
-	lldb ./test
+$(DIR):
+	mkdir -p $(DIR)
+
+.PHONY: all run_test debug_test clean
+all: $(MAIN) $(TEST)
+
+run_test: $(TEST)
+	$(TEST)
+
+debug_test: $(TEST)
+	lldb $(TEST)
 
 clean:
-	rm -rf *.o ./main ./test
+	rm -rf $(DIR)

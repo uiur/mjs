@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 #define EXPECT_TOKEN_TYPE(TOKEN, TYPE) if ((TOKEN)->type != TYPE) { fprintf(stderr, "expect token type %s, but got %d", #TYPE, (TOKEN)->type); abort(); }
 
@@ -25,6 +26,7 @@ Token* tokenize(char *source) {
     }
     Token *token = malloc(sizeof(Token));
     token->type = TOKEN_ANY;
+    token->next = NULL;
 
     int size = 1;
     if (isalpha(*current)) {
@@ -47,6 +49,7 @@ Token* tokenize(char *source) {
 
     token->value = calloc(size + 1, sizeof(char));
     strncpy(token->value, current, size);
+    assert(strlen(token->value) > 0);
 
     prev_token->next = token;
     prev_token = token;
@@ -80,6 +83,14 @@ typedef struct ParseState {
   struct Token *token;
 } ParseState;
 
+Node* node_alloc(NodeType type, int children_size) {
+  Node *node = malloc(sizeof(Node));
+  node->type = type;
+  node->children = malloc((children_size + 1) * sizeof(Node*));
+  node->children[children_size] = NULL;
+  return node;
+}
+
 void parse_state_next(ParseState *state) {
   state->token = state->token->next;
 }
@@ -96,8 +107,7 @@ void parse_state_expect(ParseState *state, char *str) {
 
 Node* parse_primary(ParseState *state) {
   if (state->token->type == TOKEN_NUMBER) {
-    Node *node = malloc(sizeof(Node));
-    node->type = NODE_PRIMITIVE_NUMBER;
+    Node *node = node_alloc(NODE_PRIMITIVE_NUMBER, 0);
     node->value = state->token->value;
 
     parse_state_next(state);
@@ -114,15 +124,14 @@ Node* parse_function_call(ParseState *state) {
   Token *current = state->token;
   if (current->type == TOKEN_IDENTIFIER) {
     if (strcmp(current->next->value, "(") == 0) {
-      Node *node = malloc(sizeof(Node));
-      node->type = NODE_FUNCTION_CALL;
+      Node *node = node_alloc(NODE_FUNCTION_CALL, 0);
       node->value = current->value;
 
       parse_state_next(state);
       parse_state_next(state);
 
       int i = 0;
-      while(1) {
+      while (1) {
         Node *expression = parse_expression(state);
         if (expression == NULL) break;
 
@@ -184,13 +193,6 @@ Node* parse_expression(ParseState *state) {
   return node;
 }
 
-Node* node_alloc(NodeType type, int children_size) {
-  Node *node = malloc(sizeof(Node));
-  node->type = type;
-  node->children = malloc((children_size + 1) * sizeof(Node*));
-  node->children[children_size] = NULL;
-  return node;
-}
 
 int token_matches(Token *token, TokenType type, const char *value) {
   return token->type == type && strcmp(token->value, value) == 0;
@@ -210,6 +212,7 @@ Node* parse_variable_assignment_statement(ParseState *state) {
 
     node->children[0] = identifier;
     node->children[1] = expression;
+    parse_state_expect(state, ";");
 
     return node;
   }
