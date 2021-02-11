@@ -4,9 +4,12 @@
 #include <string.h>
 #include <ctype.h>
 
+#define EXPECT_TOKEN_TYPE(TOKEN, TYPE) if ((TOKEN)->type != TYPE) { fprintf(stderr, "expect token type %s, but got %d", #TYPE, (TOKEN)->type); abort(); }
+
 char *token_symbols[] = {
   "+",
   "-",
+  "=",
   NULL,
 };
 
@@ -62,7 +65,9 @@ void token_pp(Token* token) {
 }
 
 // program := statement*
-// statement := expression ';'
+// statement := expression ';' | variable_declaration_statement | variable_assignment_statement
+// variable_declaration_statement := 'var' identifier ';'
+// variable_assignment_statement := identifier '=' expression ';'
 // expression := term (op expression)?
 // term := function_call | primary
 // function_call := identifier '(' (expression (',' expression)*)?')'
@@ -159,6 +164,7 @@ Node* parse_term(ParseState *state) {
 Node* parse_expression(ParseState *state) {
   Node *term = parse_term(state);
 
+  if (state->token == NULL) return term;
   if (state->token->type != TOKEN_SYMBOL) return term;
 
   char *symbol = state->token->value;
@@ -178,8 +184,73 @@ Node* parse_expression(ParseState *state) {
   return node;
 }
 
+Node* node_alloc(NodeType type, int children_size) {
+  Node *node = malloc(sizeof(Node));
+  node->type = type;
+  node->children = malloc((children_size + 1) * sizeof(Node*));
+  node->children[children_size] = NULL;
+  return node;
+}
+
+int token_matches(Token *token, TokenType type, const char *value) {
+  return token->type == type && strcmp(token->value, value) == 0;
+}
+
+Node* parse_variable_assignment_statement(ParseState *state) {
+  Token *current = state->token;
+  if (current->type == TOKEN_IDENTIFIER && token_matches(current->next, TOKEN_SYMBOL, "=")) {
+    parse_state_next(state);
+    parse_state_next(state);
+
+    Node *node = node_alloc(NODE_VAR_ASSIGNMENT, 2);
+    Node *identifier = node_alloc(NODE_IDENTIFIER, 0);
+    identifier->value = current->value;
+
+    Node *expression = parse_expression(state);
+
+    node->children[0] = identifier;
+    node->children[1] = expression;
+
+    return node;
+  }
+
+  return NULL;
+}
+
+Node* parse_variable_declaration_statement(ParseState *state) {
+  if (strcmp(state->token->value, "var") == 0) {
+    parse_state_next(state);
+
+    EXPECT_TOKEN_TYPE(state->token, TOKEN_IDENTIFIER);
+
+    Node *node = node_alloc(NODE_VAR_DECLARATION, 1);
+    node->value = "var";
+
+    Node *identifier = node_alloc(NODE_IDENTIFIER, 0);
+    identifier->value = state->token->value;
+
+    node->children[0] = identifier;
+
+    parse_state_next(state);
+    parse_state_expect(state, ";");
+
+    return node;
+  }
+
+  return NULL;
+}
+
 Node* parse_statement(ParseState *state) {
+  if (state->token == NULL) return NULL;
+
+  Node *variable_declaration_statement = parse_variable_declaration_statement(state);
+  if (variable_declaration_statement != NULL) return variable_declaration_statement;
+
+  Node *variable_assignment_statement = parse_variable_assignment_statement(state);
+  if (variable_assignment_statement != NULL) return variable_assignment_statement;
+
   Node *expression = parse_expression(state);
+  if (expression == NULL) return NULL;
   parse_state_expect(state, ";");
   return expression;
 }
@@ -187,14 +258,21 @@ Node* parse_statement(ParseState *state) {
 Node* parse_program(ParseState *state) {
   Node *program_node = malloc(sizeof(Node));
   program_node->type = NODE_PROGRAM;
-  Node *statement_node = parse_statement(state);
-  program_node->children = malloc(2 * sizeof(Node*));
 
-  if (statement_node != NULL) {
-    program_node->children[0] = statement_node;
+  int size = 0;
+  program_node->children = malloc(sizeof(Node*));
+  program_node->children[0] = NULL;
+
+  while (1) {
+    Node *statement_node = parse_statement(state);
+    if (statement_node == NULL) break;
+
+    size++;
+    program_node->children = realloc(program_node->children, (size + 1) * sizeof(Node*));
+    program_node->children[size - 1] = statement_node;
+    program_node->children[size] = NULL;
   }
 
-  program_node->children[1] = NULL;
 
   return program_node;
 }

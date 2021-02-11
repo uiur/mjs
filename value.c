@@ -66,6 +66,17 @@ Value* evaluate(Node *node) {
       return number;
     }
 
+    case NODE_VAR_DECLARATION: {
+      // env
+
+      break;
+    }
+
+    case NODE_VAR_ASSIGNMENT: {
+      break;
+    }
+
+
     case NODE_BINARY_OPERATOR:
     case NODE_FUNCTION_CALL: {
       char *identifier = node->value;
@@ -96,7 +107,7 @@ Value* evaluate(Node *node) {
     }
 
     default:
-      fprintf(stderr, "unexpected node type: %d\n", node->type);
+      fprintf(stderr, "runtime error: unexpected node type: %d\n", node->type);
       abort();
       break;
     }
