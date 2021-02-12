@@ -11,5 +11,5 @@ typedef struct HashTableEntry {
 } HashTableEntry;
 
 HashTable* hash_table_new();
-void hash_table_write(HashTable *hash, const char *key, void *value);
-void* hash_table_read(HashTable *hash, const char *key);
+void hash_table_set(HashTable *hash, const char *key, void *value);
+void* hash_table_get(HashTable *hash, const char *key);

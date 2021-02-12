@@ -20,22 +20,22 @@ void eval(char *source) {
 void test_hash() {
   printf("test_hash\n");
   HashTable *hash = hash_table_new();
-  char *value = hash_table_read(hash, "foo");
+  char *value = hash_table_get(hash, "foo");
   assert(value == NULL);
 
-  hash_table_write(hash, "foo", "bar");
-  value = hash_table_read(hash, "foo");
+  hash_table_set(hash, "foo", "bar");
+  value = hash_table_get(hash, "foo");
   assert(strcmp(value, "bar") == 0);
 
-  hash_table_write(hash, "foo", "bar2");
-  value = hash_table_read(hash, "foo");
+  hash_table_set(hash, "foo", "bar2");
+  value = hash_table_get(hash, "foo");
   assert(strcmp(value, "bar2") == 0);
 
   // resize test
   for (int i = 0; i < 100; i++) {
     char ch = 'a' + i;
     char str[] = { ch, '\0' };
-    hash_table_write(hash, str, str);
+    hash_table_set(hash, str, str);
   }
 
   assert(hash->used > 100);
@@ -50,8 +50,7 @@ void test_example() {
   eval("log(1);");
   eval("log(1); log(2);");
   eval("log(1 + 2);");
-  eval("var foo;");
-  eval("foo = 1;");
+  eval("var foo; foo = 1 + 2; log(foo);");
 }
 
 int main(int argc, char const **argv) {

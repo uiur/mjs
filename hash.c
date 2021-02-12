@@ -80,7 +80,7 @@ void hash_table_resize(HashTable* hash, unsigned int new_size) {
   hash->cap = new_size;
 }
 
-void hash_table_write(HashTable* hash, const char *key, void *value) {
+void hash_table_set(HashTable* hash, const char *key, void *value) {
   HashTableEntry *found_entry = hash_table_find_entry(hash, key);
   if (found_entry != NULL) {
     found_entry->value = value;
@@ -102,7 +102,7 @@ void hash_table_write(HashTable* hash, const char *key, void *value) {
   hash_table_insert_entry(hash, i, new_entry);
 }
 
-void* hash_table_read(HashTable* hash, const char *key) {
+void* hash_table_get(HashTable* hash, const char *key) {
   HashTableEntry *entry = hash_table_find_entry(hash, key);
   if (entry != NULL) {
     return entry->value;
