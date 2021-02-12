@@ -67,6 +67,10 @@ void token_pp(Token* token) {
   printf("\n");
 }
 
+int token_matches(Token *token, TokenType type, const char *value) {
+  return token->type == type && strcmp(token->value, value) == 0;
+}
+
 // program := statement*
 // statement := expression ';' | variable_declaration_statement | variable_assignment_statement
 // variable_declaration_statement := 'var' identifier ';'
@@ -83,9 +87,16 @@ typedef struct ParseState {
   struct Token *token;
 } ParseState;
 
+Node* parse_statement(ParseState *state);
+
 Node* node_alloc(NodeType type, int children_size) {
   Node *node = malloc(sizeof(Node));
   node->type = type;
+
+  int arg_size = 0;
+  node->args = malloc((arg_size + 1) * sizeof(Node*));
+  node->args[arg_size] = NULL;
+
   node->children = malloc((children_size + 1) * sizeof(Node*));
   node->children[children_size] = NULL;
   return node;
@@ -111,7 +122,14 @@ Node* parse_primary(ParseState *state) {
     node->value = state->token->value;
 
     parse_state_next(state);
+    return node;
+  }
 
+  if (state->token->type == TOKEN_IDENTIFIER) {
+    Node *node = node_alloc(NODE_IDENTIFIER, 0);
+    node->value = state->token->value;
+
+    parse_state_next(state);
     return node;
   }
 
@@ -139,6 +157,10 @@ Node* parse_function_call(ParseState *state) {
         node->children = realloc(node->children, (size + 1) * sizeof(Node*));
         node->children[i] = expression;
         node->children[size] = NULL;
+
+        if (!token_matches(state->token, TOKEN_ANY, ",")) break;
+        parse_state_next(state);
+
         i++;
       }
 
@@ -194,8 +216,77 @@ Node* parse_expression(ParseState *state) {
 }
 
 
-int token_matches(Token *token, TokenType type, const char *value) {
-  return token->type == type && strcmp(token->value, value) == 0;
+
+Node* parse_return_statement(ParseState *state) {
+  Token *head = state->token;
+  if (token_matches(head, TOKEN_IDENTIFIER, "return")) {
+    parse_state_next(state);
+
+    Node *node = node_alloc(NODE_STATEMENT_RETURN, 1);
+    Node *expression = parse_expression(state);
+    node->value = "return";
+    node->children[0] = expression;
+
+    parse_state_expect(state, ";");
+    return node;
+  }
+
+  return NULL;
+}
+
+Node* parse_function_declaration(ParseState *state) {
+  Token *head = state->token;
+  if (token_matches(head, TOKEN_IDENTIFIER, "function")) {
+    parse_state_next(state);
+
+    EXPECT_TOKEN_TYPE(head->next, TOKEN_IDENTIFIER);
+    Token *function_name = head->next;
+    parse_state_next(state);
+
+    parse_state_expect(state, "(");
+
+    Node *node = node_alloc(NODE_FUNCTION_DECLARATION, 0);
+    node->value = function_name->value;
+    int size = 0;
+    while (state->token->type == TOKEN_IDENTIFIER) {
+      size++;
+      node->args = realloc(node->args, (size + 1) * sizeof(Node*));
+      node->args[size] = NULL;
+
+      Node *argument = node_alloc(NODE_IDENTIFIER, 0);
+      Token *token = state->token;
+      argument->value = token->value;
+      node->args[size - 1] = argument;
+
+      parse_state_next(state);
+
+      if (!token_matches(state->token, TOKEN_ANY, ",")) break;
+      parse_state_next(state);
+    }
+
+    parse_state_expect(state, ")");
+
+    parse_state_expect(state, "{");
+
+    size = 0;
+    node->children = malloc(sizeof(Node*));
+    node->children[0] = NULL;
+
+    while (1) {
+      Node *statement_node = parse_statement(state);
+      if (statement_node == NULL) break;
+
+      size++;
+      node->children = realloc(node->children, (size + 1) * sizeof(Node*));
+      node->children[size - 1] = statement_node;
+      node->children[size] = NULL;
+    }
+
+    parse_state_expect(state, "}");
+    return node;
+  }
+
+  return NULL;
 }
 
 Node* parse_variable_assignment_statement(ParseState *state) {
@@ -251,6 +342,12 @@ Node* parse_statement(ParseState *state) {
 
   Node *variable_assignment_statement = parse_variable_assignment_statement(state);
   if (variable_assignment_statement != NULL) return variable_assignment_statement;
+
+  Node *function_declaration = parse_function_declaration(state);
+  if (function_declaration != NULL) return function_declaration;
+
+  Node *return_statement = parse_return_statement(state);
+  if (return_statement != NULL) return return_statement;
 
   Node *expression = parse_expression(state);
   if (expression == NULL) return NULL;

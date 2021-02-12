@@ -13,9 +13,21 @@ typedef struct Env {
 
 Value* console_log(int size, Value **args) {
   for (int i = 0; i < size; i++) {
-    double n = args[i]->value;
-    printf("%.0f\n", n);
+    Value *v = args[i];
+    if (v == NULL) {
+      fprintf(stderr, "log error: unexpected null\n");
+      abort();
+    }
+
+    if (v->type == VALUE_NUMBER) {
+      double n = v->value;
+      printf("%.0f\n", n);
+    } else {
+      fprintf(stderr, "log error: %d\n", v->type);
+      abort();
+    }
   }
+  return NULL;
 }
 
 Value* value_number_subtract(int size, Value **args) {
@@ -52,6 +64,33 @@ Value* value_number_add(int size, Value **args) {
   number->value = sum;
 
   return number;
+}
+Value* evaluate_node(Node *node, Env *env);
+
+Value* evaluate_function_call(Value *value, Value **args, int size, Env *env) {
+  Node *node = value->node;
+
+  Env *function_env = malloc(sizeof(Env));
+  function_env->table = hash_table_new();
+  function_env->parent = env;
+
+  for (int i = 0; i < size; i++) {
+    Node *arg = value->node->args[i];
+    hash_table_set(function_env->table, arg->value, args[i]);
+  }
+
+  Value *result = NULL;
+  for (int i = 0; node->children[i] != NULL; i++) {
+    Node *child = node->children[i];
+    Value *value = evaluate_node(child, function_env);
+    if (child->type == NODE_STATEMENT_RETURN) {
+      result = value;
+      break;
+    }
+  }
+
+
+  return result;
 }
 
 Value* evaluate_node(Node *node, Env *env) {
@@ -93,6 +132,21 @@ Value* evaluate_node(Node *node, Env *env) {
       break;
     }
 
+    case NODE_FUNCTION_DECLARATION: {
+      Value *function_value = malloc(sizeof(Value));
+      function_value->type = VALUE_FUNCTION;
+      function_value->node = node;
+
+      hash_table_set(env->table, node->value, function_value);
+
+      break;
+    }
+
+    case NODE_STATEMENT_RETURN: {
+      Value *value = evaluate_node(node->children[0], env);
+      return value;
+    }
+
     case NODE_BINARY_OPERATOR:
     case NODE_FUNCTION_CALL: {
       char *identifier = node->value;
@@ -103,6 +157,11 @@ Value* evaluate_node(Node *node, Env *env) {
       Value **args = malloc(size * sizeof(Value));
       for (int i = 0; node->children[i] != NULL; i++) {
         args[i] = evaluate_node(node->children[i], env);
+      }
+
+      Value *value = hash_table_get(env->table, identifier);
+      if (value != NULL && value->type == VALUE_FUNCTION) {
+        return evaluate_function_call(value, args, size, env);
       }
 
       if (strcmp(identifier, "log") == 0) {
@@ -116,6 +175,7 @@ Value* evaluate_node(Node *node, Env *env) {
       if (strcmp(identifier, "-") == 0) {
         return value_number_subtract(size, args);
       }
+
 
       fprintf(stderr, "runtime error: `%s` is not defined\n", identifier);
 
