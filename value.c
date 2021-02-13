@@ -1,3 +1,4 @@
+#include "tokenize.h"
 #include "parse.h"
 #include "value.h"
 #include "hash.h"

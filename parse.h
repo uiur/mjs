@@ -23,21 +23,5 @@ typedef struct Node {
   struct Node **children;
 } Node;
 
-typedef enum TokenType {
-  TOKEN_ANY,
-  TOKEN_NUMBER,
-  TOKEN_IDENTIFIER,
-  TOKEN_SYMBOL,
-} TokenType;
-
-typedef struct Token {
-  TokenType type;
-  char *value;
-  struct Token *next;
-} Token;
-
-Token* tokenize(char *source);
-void token_pp(Token* token);
-
 Node* parse(Token *token);
 void node_pp(Node *node);
