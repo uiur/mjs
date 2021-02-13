@@ -11,6 +11,22 @@ typedef struct Env {
   struct Env *parent;
 } Env;
 
+Env* env_new(Env *parent) {
+  Env *env = malloc(sizeof(Env));
+  env->table = hash_table_new();
+  env->parent = parent;
+  return env;
+}
+
+Value* env_get(Env *env, const char *key)  {
+  if (env == NULL) return NULL;
+
+  Value* value = hash_table_get(env->table, key);
+  if (value != NULL) return value;
+
+  return env_get(env->parent, key);
+}
+
 Value* console_log(int size, Value **args) {
   for (int i = 0; i < size; i++) {
     Value *v = args[i];
@@ -70,9 +86,7 @@ Value* evaluate_node(Node *node, Env *env);
 Value* evaluate_function_call(Value *value, Value **args, int size, Env *env) {
   Node *node = value->node;
 
-  Env *function_env = malloc(sizeof(Env));
-  function_env->table = hash_table_new();
-  function_env->parent = env;
+  Env *function_env = env_new(env);
 
   for (int i = 0; i < size; i++) {
     Node *arg = value->node->args[i];
@@ -193,8 +207,6 @@ Value* evaluate_node(Node *node, Env *env) {
 }
 
 Value* evaluate(Node *node) {
-  Env *global = malloc(sizeof(Env));
-  global->table = hash_table_new();
-  global->parent = NULL;
+  Env *global = env_new(NULL);
   return evaluate_node(node, global);
 }
