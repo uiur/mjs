@@ -27,6 +27,14 @@ Value* env_get(Env *env, const char *key)  {
   return env_get(env->parent, key);
 }
 
+Value* value_number_new(double n) {
+  Value *number = malloc(sizeof(Value));
+  number->type = VALUE_NUMBER;
+  number->value = n;
+
+  return number;
+}
+
 Value* console_log(int size, Value **args) {
   for (int i = 0; i < size; i++) {
     Value *v = args[i];
@@ -46,41 +54,59 @@ Value* console_log(int size, Value **args) {
   return NULL;
 }
 
-Value* value_number_subtract(int size, Value **args) {
-  if (size != 2) {
-    fprintf(stderr, "requires %d arguments, but %d\n", 2, size);
+void assert_args_size(int size, int expected) {
+  if (size != expected) {
+    fprintf(stderr, "requires %d arguments, but %d\n", expected, size);
     abort();
   }
+}
+
+Value* value_number_subtract(int size, Value **args) {
+  assert_args_size(size, 2);
 
   Value *left = args[0];
   Value *right = args[1];
 
   double sum = left->value - right->value;
-
-  Value *number = malloc(sizeof(Value));
-  number->type = VALUE_NUMBER;
-  number->value = sum;
-
+  Value *number = value_number_new(sum);
   return number;
 }
 
 Value* value_number_add(int size, Value **args) {
-  if (size != 2) {
-    fprintf(stderr, "requires %d arguments, but %d\n", 2, size);
-    abort();
-  }
+  assert_args_size(size, 2);
 
   Value *left = args[0];
   Value *right = args[1];
 
   double sum = left->value + right->value;
 
-  Value *number = malloc(sizeof(Value));
-  number->type = VALUE_NUMBER;
-  number->value = sum;
+  Value *number = value_number_new(sum);
+  return number;
+}
+
+Value* value_number_multiply(int size, Value **args) {
+  assert_args_size(size, 2);
+
+  Value *left = args[0];
+  Value *right = args[1];
+
+  double result = left->value * right->value;
+  Value *number = value_number_new(result);
 
   return number;
 }
+
+Value* value_number_divide(int size, Value **args) {
+  assert_args_size(size, 2);
+
+  Value *left = args[0];
+  Value *right = args[1];
+
+  double result = left->value / right->value;
+  Value *number = value_number_new(result);
+  return number;
+}
+
 Value* evaluate_node(Node *node, Env *env);
 
 Value* evaluate_function_call(Value *value, Value **args, int size, Env *env) {
@@ -190,8 +216,16 @@ Value* evaluate_node(Node *node, Env *env) {
         return value_number_subtract(size, args);
       }
 
+      if (strcmp(identifier, "*") == 0) {
+        return value_number_multiply(size, args);
+      }
+
+      if (strcmp(identifier, "/") == 0) {
+        return value_number_divide(size, args);
+      }
 
       fprintf(stderr, "runtime error: `%s` is not defined\n", identifier);
+      abort();
 
       break;
     }

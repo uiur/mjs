@@ -10,7 +10,11 @@
 char *token_symbols[] = {
   "+",
   "-",
+  "*",
+  "/",
   "=",
+  "(",
+  ")",
   NULL,
 };
 
@@ -75,7 +79,8 @@ int token_matches(Token *token, TokenType type, const char *value) {
 // statement := expression ';' | variable_declaration_statement | variable_assignment_statement
 // variable_declaration_statement := 'var' identifier ';'
 // variable_assignment_statement := identifier '=' expression ';'
-// expression := term (op expression)?
+// expression := expression2 (op expression)?
+// expression2 := term (op2 expression)?
 // term := function_call | primary
 // function_call := identifier '(' (expression (',' expression)*)?')'
 // primary := '(' expression ')' | identifier | number_constant | string_constant
@@ -116,6 +121,8 @@ void parse_state_expect(ParseState *state, char *str) {
   parse_state_next(state);
 }
 
+Node* parse_expression(ParseState *state);
+
 Node* parse_primary(ParseState *state) {
   if (state->token->type == TOKEN_NUMBER) {
     Node *node = node_alloc(NODE_PRIMITIVE_NUMBER, 0);
@@ -133,10 +140,15 @@ Node* parse_primary(ParseState *state) {
     return node;
   }
 
+  if (token_matches(state->token, TOKEN_SYMBOL, "(")) {
+    parse_state_next(state);
+    Node *expression = parse_expression(state);
+    parse_state_expect(state, ")");
+    return expression;
+  }
+
   return NULL;
 }
-
-Node* parse_expression(ParseState *state);
 
 Node* parse_function_call(ParseState *state) {
   Token *current = state->token;
@@ -192,25 +204,43 @@ Node* parse_term(ParseState *state) {
   return NULL;
 }
 
-Node* parse_expression(ParseState *state) {
+Node* parse_expression2(ParseState *state) {
   Node *term = parse_term(state);
 
   if (state->token == NULL) return term;
-  if (state->token->type != TOKEN_SYMBOL) return term;
+
+  int matched = token_matches(state->token, TOKEN_SYMBOL, "*") || token_matches(state->token, TOKEN_SYMBOL, "/");
+  if (!matched) return term;
+
+  char *symbol = state->token->value;
+  parse_state_next(state);
+  Node *expression = parse_expression2(state);
+
+  Node *node = node_alloc(NODE_BINARY_OPERATOR, 2);
+  node->value = symbol;
+
+  node->children[0] = term;
+  node->children[1] = expression;
+
+  return node;
+}
+
+Node* parse_expression(ParseState *state) {
+  Node *term = parse_expression2(state);
+
+  if (state->token == NULL) return term;
+  int matched = token_matches(state->token, TOKEN_SYMBOL, "+") || token_matches(state->token, TOKEN_SYMBOL, "-");
+  if (!matched) return term;
 
   char *symbol = state->token->value;
   parse_state_next(state);
   Node *expression = parse_expression(state);
 
-  Node *node = malloc(sizeof(Node));
-  node->type = NODE_BINARY_OPERATOR;
+  Node *node = node_alloc(NODE_BINARY_OPERATOR, 2);
   node->value = symbol;
 
-  int size = 2;
-  node->children = malloc((size + 1) * sizeof(Node*));
   node->children[0] = term;
   node->children[1] = expression;
-  node->children[size] = NULL;
 
   return node;
 }
