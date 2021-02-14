@@ -29,7 +29,9 @@ typedef struct ParseState {
   struct Token *token;
 } ParseState;
 
+Node* parse_statement_list(ParseState *state);
 Node* parse_statement(ParseState *state);
+
 
 Node* node_alloc(NodeType type, int children_size) {
   Node *node = malloc(sizeof(Node));
@@ -98,7 +100,7 @@ Node* parse_function_call(ParseState *state) {
       parse_state_next(state);
 
       int i = 0;
-      while (1) {
+      while(1) {
         Node *expression = parse_expression(state);
         if (expression == NULL) break;
 
@@ -182,8 +184,6 @@ Node* parse_expression(ParseState *state) {
   return node;
 }
 
-
-
 Node* parse_return_statement(ParseState *state) {
   Token *head = state->token;
   if (token_matches(head, TOKEN_IDENTIFIER, "return")) {
@@ -235,19 +235,11 @@ Node* parse_function_declaration(ParseState *state) {
 
     parse_state_expect(state, "{");
 
-    size = 0;
-    node->children = malloc(sizeof(Node*));
-    node->children[0] = NULL;
+    Node *statement_list = parse_statement_list(state);
 
-    while (1) {
-      Node *statement_node = parse_statement(state);
-      if (statement_node == NULL) break;
+    node->children = statement_list->children;
+    free(statement_list);
 
-      size++;
-      node->children = realloc(node->children, (size + 1) * sizeof(Node*));
-      node->children[size - 1] = statement_node;
-      node->children[size] = NULL;
-    }
 
     parse_state_expect(state, "}");
     return node;
@@ -301,6 +293,35 @@ Node* parse_variable_declaration_statement(ParseState *state) {
   return NULL;
 }
 
+Node* parse_if_statement(ParseState *state) {
+  if (strcmp(state->token->value, "if") == 0) {
+    parse_state_next(state);
+    Node *node = node_alloc(NODE_STATEMENT_IF, 0);
+
+    int arg_size = 1;
+    node->args = malloc((arg_size + 1) * sizeof(Node*));
+    node->args[arg_size] = NULL;
+
+    parse_state_expect(state, "(");
+
+    Node *expression = parse_expression(state);
+    node->args[0] = expression;
+
+    parse_state_expect(state, ")");
+    parse_state_expect(state, "{");
+
+    Node *statement_list = parse_statement_list(state);
+    node->children = statement_list->children;
+    free(statement_list);
+
+    parse_state_expect(state, "}");
+
+    return node;
+  }
+
+  return NULL;
+}
+
 Node* parse_statement(ParseState *state) {
   if (state->token == NULL) return NULL;
 
@@ -313,6 +334,9 @@ Node* parse_statement(ParseState *state) {
   Node *function_declaration = parse_function_declaration(state);
   if (function_declaration != NULL) return function_declaration;
 
+  Node *if_statement = parse_if_statement(state);
+  if (if_statement != NULL) return if_statement;
+
   Node *return_statement = parse_return_statement(state);
   if (return_statement != NULL) return return_statement;
 
@@ -322,26 +346,28 @@ Node* parse_statement(ParseState *state) {
   return expression;
 }
 
-Node* parse_program(ParseState *state) {
-  Node *program_node = malloc(sizeof(Node));
-  program_node->type = NODE_PROGRAM;
-
+Node* parse_statement_list(ParseState *state) {
   int size = 0;
-  program_node->children = malloc(sizeof(Node*));
-  program_node->children[0] = NULL;
+  Node *node = node_alloc(NODE_STATEMENT_LIST, size);
 
   while (1) {
     Node *statement_node = parse_statement(state);
     if (statement_node == NULL) break;
 
     size++;
-    program_node->children = realloc(program_node->children, (size + 1) * sizeof(Node*));
-    program_node->children[size - 1] = statement_node;
-    program_node->children[size] = NULL;
+    node->children = realloc(node->children, (size + 1) * sizeof(Node*));
+    node->children[size - 1] = statement_node;
+    node->children[size] = NULL;
   }
 
+  return node;
+}
 
-  return program_node;
+Node* parse_program(ParseState *state) {
+  Node *node = parse_statement_list(state);
+  node->type = NODE_PROGRAM;
+
+  return node;
 }
 
 Node* parse(Token *token) {
@@ -369,11 +395,18 @@ void node_pp(Node *node) {
   char *label;
   if (node->type == NODE_PROGRAM) {
     label = "program";
+  } else if (node->type == NODE_STATEMENT_IF) {
+    label = "if";
   } else {
     label = node->value;
   }
 
   printf("(%s", label);
+
+  for (int i = 0; node->args[i] != NULL; i++) {
+    printf(" ");
+    node_pp(node->args[i]);
+  }
 
   for (int i = 0; node->children[i] != NULL; i++) {
     printf(" ");

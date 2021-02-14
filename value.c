@@ -36,6 +36,15 @@ Value* value_number_new(double n) {
   return number;
 }
 
+int value_is_truthy(Value *value) {
+  if (value->type == VALUE_NUMBER) {
+    double n = value->value;
+    return n != 0;
+  }
+
+  return 1;
+}
+
 Value* console_log(int size, Value **args) {
   for (int i = 0; i < size; i++) {
     Value *v = args[i];
@@ -110,8 +119,31 @@ Value* value_number_divide(int size, Value **args) {
 
 Value* evaluate_node(Node *node, Env *env);
 
+typedef struct CallContext {
+  int returned;
+} CallContext;
+
+CallContext context;
+CallContext *ctx = &context;
+
+Value* evaluate_node_children(Node *node, Env *env) {
+  Value *result = NULL;
+  for (int i = 0; node->children[i] != NULL; i++) {
+    Node *child = node->children[i];
+
+    Value *value = evaluate_node(child, env);
+    if (ctx->returned) {
+      result = value;
+      break;
+    }
+  }
+
+  return result;
+}
+
 Value* evaluate_function_call(Value *value, Value **args, int size, Env *env) {
   Node *node = value->node;
+  ctx->returned = 0;
 
   Env *function_env = env_new(env);
 
@@ -120,17 +152,7 @@ Value* evaluate_function_call(Value *value, Value **args, int size, Env *env) {
     hash_table_set(function_env->table, arg->value, args[i]);
   }
 
-  Value *result = NULL;
-  for (int i = 0; node->children[i] != NULL; i++) {
-    Node *child = node->children[i];
-    Value *value = evaluate_node(child, function_env);
-    if (child->type == NODE_STATEMENT_RETURN) {
-      result = value;
-      break;
-    }
-  }
-
-
+  Value *result = evaluate_node_children(node, function_env);
   return result;
 }
 
@@ -154,7 +176,7 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_IDENTIFIER: {
-      Value *value = hash_table_get(env->table, node->value);
+      Value *value = env_get(env, node->value);
       return value;
     }
 
@@ -185,7 +207,18 @@ Value* evaluate_node(Node *node, Env *env) {
 
     case NODE_STATEMENT_RETURN: {
       Value *value = evaluate_node(node->children[0], env);
+      ctx->returned = 1;
       return value;
+    }
+
+    case NODE_STATEMENT_IF: {
+      Value *condition = evaluate_node(node->args[0], env);
+      if (value_is_truthy(condition)) {
+        Value *result = evaluate_node_children(node, env);
+        return result;
+      }
+
+      return NULL;
     }
 
     case NODE_BINARY_OPERATOR:
@@ -200,9 +233,10 @@ Value* evaluate_node(Node *node, Env *env) {
         args[i] = evaluate_node(node->children[i], env);
       }
 
-      Value *value = hash_table_get(env->table, identifier);
+      Value *value = env_get(env, identifier);
       if (value != NULL && value->type == VALUE_FUNCTION) {
-        return evaluate_function_call(value, args, size, env);
+        Value *return_value = evaluate_function_call(value, args, size, env);
+        return return_value;
       }
 
       if (strcmp(identifier, "log") == 0) {

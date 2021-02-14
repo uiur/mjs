@@ -14,6 +14,7 @@ typedef enum NodeType {
   NODE_FUNCTION_CALL,
   NODE_FUNCTION_DECLARATION,
   NODE_PROGRAM,
+  NODE_STATEMENT_LIST,
 } NodeType;
 
 typedef struct Node {

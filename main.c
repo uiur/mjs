@@ -41,6 +41,8 @@ int main(int argc, char const **argv) {
 
   Token *token = tokenize(source);
   Node *node = parse(token);
+
+  // node_pp(node); printf("\n");
   evaluate(node);
 
   return 0;

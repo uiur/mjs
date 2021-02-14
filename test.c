@@ -57,6 +57,7 @@ void test_example() {
   eval("var foo; foo = 1 + 2; log(foo);");
 
   eval("function add(a, b) { return a + b; } log(add(1, 2));");
+  eval("if (1) { log(1); }");
 }
 
 int main(int argc, char const **argv) {
