@@ -30,7 +30,7 @@ Value* env_get(Env *env, const char *key)  {
 
 Value* value_new(ValueType type) {
   Value *v = malloc(sizeof(Value));
-  v->type = VALUE_NUMBER;
+  v->type = type;
   v->value = 0;
   return v;
 }
@@ -78,7 +78,7 @@ char* value_inspect(Value *v) {
   char *buf = malloc(100 * sizeof(char));
   if (v->type == VALUE_NUMBER) {
     double n = v->value;
-    sprintf(buf, "%.0f\n", n);
+    sprintf(buf, "%.0f", n);
     return buf;
   } else if (v->type == VALUE_BOOLEAN) {
     if (v->value == 1) {
@@ -104,7 +104,7 @@ Value* console_log(int size, Value **args) {
       fprintf(stderr, "log error: %d\n", v->type);
       abort();
     }
-    printf("%s", str);
+    printf("%s\n", str);
   }
   return NULL;
 }
@@ -122,6 +122,30 @@ Value* value_equal(int size, Value **args) {
   Value *right = args[1];
 
   if (left->type == right->type && left->value == right->value) {
+    return value_true_new();
+  } else  {
+    return value_false_new();
+  }
+}
+
+Value* value_greater_than(int size, Value **args) {
+  assert_args_size(size, 2);
+  Value *left = args[0];
+  Value *right = args[1];
+
+  if (left->type == right->type && left->value > right->value) {
+    return value_true_new();
+  } else  {
+    return value_false_new();
+  }
+}
+
+Value* value_less_than(int size, Value **args) {
+  assert_args_size(size, 2);
+  Value *left = args[0];
+  Value *right = args[1];
+
+  if (left->type == right->type && left->value < right->value) {
     return value_true_new();
   } else  {
     return value_false_new();
@@ -318,6 +342,14 @@ Value* evaluate_node(Node *node, Env *env) {
 
       if (strcmp(identifier, "===") == 0) {
         return value_equal(size, args);
+      }
+
+      if (strcmp(identifier, ">") == 0) {
+        return value_greater_than(size, args);
+      }
+
+      if (strcmp(identifier, "<") == 0) {
+        return value_less_than(size, args);
       }
 
       fprintf(stderr, "runtime error: `%s` is not defined\n", identifier);

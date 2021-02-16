@@ -15,7 +15,6 @@ void eval(char *source) {
   node_pp(node);
   printf("\n");
   evaluate(node);
-  printf("---\n");
 }
 
 void test_hash() {
@@ -57,6 +56,8 @@ void test_example() {
   eval("1 * 2 + 3;");
   eval("1 * (2 + 3);");
   eval("1 === 2;");
+  eval("1 > 2;");
+  eval("1 < 2;");
 
   eval("log(1);");
   eval("log(1); log(2);");
@@ -65,6 +66,7 @@ void test_example() {
 
   eval("function add(a, b) { return a + b; } log(add(1, 2));");
   eval("if (1) { log(1); }");
+  eval("if (1 < 2) { log(1 < 2); }");
 }
 
 int main(int argc, char const **argv) {

@@ -209,7 +209,10 @@ Node* parse_equality_operation(ParseState *state) {
 
   if (state->token == NULL) return term;
   int matched =
-    token_matches(state->token, TOKEN_SYMBOL, "===");
+    token_matches(state->token, TOKEN_SYMBOL, "===") ||
+    token_matches(state->token, TOKEN_SYMBOL, ">") ||
+    token_matches(state->token, TOKEN_SYMBOL, "<");
+    ;
   if (!matched) return term;
 
   char *symbol = state->token->value;
