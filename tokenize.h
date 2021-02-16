@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 typedef enum TokenType {
   TOKEN_ANY,
   TOKEN_NUMBER,
@@ -14,3 +16,25 @@ typedef struct Token {
 
 Token* tokenize(char *source);
 void token_pp(Token* token);
+
+static char *token_symbols[] = {
+  "+",
+  "-",
+  "*",
+  "/",
+  "=",
+  "(",
+  ")",
+  NULL,
+};
+
+static char *token_keywords[] = {
+  "null",
+  "undefined",
+  "true",
+  "false",
+  "function",
+  "var",
+  "return",
+  NULL,
+};

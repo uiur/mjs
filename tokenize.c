@@ -5,25 +5,7 @@
 #include <string.h>
 #include <assert.h>
 
-char *token_symbols[] = {
-  "+",
-  "-",
-  "*",
-  "/",
-  "=",
-  "(",
-  ")",
-  NULL,
-};
 
-char *token_keywords[] = {
-  "null",
-  "undefined",
-  "true",
-  "false",
-  "function",
-  NULL,
-};
 
 Token* tokenize(char *source) {
   char *current = source;

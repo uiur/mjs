@@ -6,7 +6,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-#define EXPECT_TOKEN_TYPE(TOKEN, TYPE) if ((TOKEN)->type != TYPE) { fprintf(stderr, "expect token type %s, but got %d", #TYPE, (TOKEN)->type); abort(); }
+#define EXPECT_TOKEN_TYPE(TOKEN, TYPE) if ((TOKEN)->type != TYPE) { fprintf(stderr, "expect token type %s, but got %s\n", #TYPE, NodeTypeString[(TOKEN)->type]); abort(); }
 
 int token_matches(Token *token, TokenType type, const char *value) {
   return token->type == type && strcmp(token->value, value) == 0;
@@ -200,7 +200,7 @@ Node* parse_expression(ParseState *state) {
 
 Node* parse_return_statement(ParseState *state) {
   Token *head = state->token;
-  if (token_matches(head, TOKEN_IDENTIFIER, "return")) {
+  if (token_matches(head, TOKEN_KEYWORD, "return")) {
     parse_state_next(state);
 
     Node *node = node_alloc(NODE_STATEMENT_RETURN, 1);
@@ -285,7 +285,7 @@ Node* parse_variable_assignment_statement(ParseState *state) {
 }
 
 Node* parse_variable_declaration_statement(ParseState *state) {
-  if (strcmp(state->token->value, "var") == 0) {
+  if (token_matches(state->token, TOKEN_KEYWORD, "var")) {
     parse_state_next(state);
 
     EXPECT_TOKEN_TYPE(state->token, TOKEN_IDENTIFIER);
