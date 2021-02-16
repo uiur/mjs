@@ -56,13 +56,22 @@ Value* value_number_new(double n) {
   return number;
 }
 
-int value_is_truthy(Value *value) {
-  if (value->type == VALUE_NUMBER) {
-    double n = value->value;
-    return n != 0;
-  }
+int value_is_truthy(Value *v) {
+  switch (v->type) {
+    case VALUE_NUMBER: {
+      double n = v->value;
+      return n != 0;
+    }
 
-  return 1;
+    case VALUE_BOOLEAN: {
+      return v->value == 1;
+    }
+
+    default: {
+      fprintf(stderr, "unexpected value type %d for value_is_truthy\n", v->type);
+      abort();
+    }
+  }
 }
 
 char* value_inspect(Value *v) {
