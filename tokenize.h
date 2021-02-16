@@ -3,6 +3,7 @@ typedef enum TokenType {
   TOKEN_NUMBER,
   TOKEN_IDENTIFIER,
   TOKEN_SYMBOL,
+  TOKEN_KEYWORD,
 } TokenType;
 
 typedef struct Token {

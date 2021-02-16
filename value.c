@@ -28,6 +28,13 @@ Value* env_get(Env *env, const char *key)  {
   return env_get(env->parent, key);
 }
 
+Value* value_new(ValueType type) {
+  Value *v = malloc(sizeof(Value));
+  v->type = VALUE_NUMBER;
+  v->value = 0;
+  return v;
+}
+
 Value* value_number_new(double n) {
   Value *number = malloc(sizeof(Value));
   number->type = VALUE_NUMBER;
@@ -265,8 +272,29 @@ Value* evaluate_node(Node *node, Env *env) {
       break;
     }
 
+    case NODE_PRIMITIVE_UNDEFINED: {
+      return value_new(VALUE_UNDEFINED);
+    }
+
+    case NODE_PRIMITIVE_NULL: {
+      return value_new(VALUE_NULL);
+    }
+
+    case NODE_PRIMITIVE_BOOLEAN: {
+      Value *v = value_new(VALUE_BOOLEAN);
+      if (strcmp(node->value, "true") == 0) {
+        v->value = 1;
+      } else if (strcmp(node->value, "false") == 0) {
+        v->value = 0;
+      } else {
+        fprintf(stderr, "runtime error: unexpected value for boolean: %s\n", node->value);
+        abort();
+      }
+      return v;
+    }
+
     default:
-      fprintf(stderr, "runtime error: unexpected node type: %d\n", node->type);
+      fprintf(stderr, "runtime error: unexpected node type: %s\n", NodeTypeString[node->type]);
       abort();
       break;
     }

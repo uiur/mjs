@@ -12,19 +12,6 @@ int token_matches(Token *token, TokenType type, const char *value) {
   return token->type == type && strcmp(token->value, value) == 0;
 }
 
-// program := statement*
-// statement := expression ';' | variable_declaration_statement | variable_assignment_statement
-// variable_declaration_statement := 'var' identifier ';'
-// variable_assignment_statement := identifier '=' expression ';'
-// expression := expression2 (op expression)?
-// expression2 := term (op2 expression)?
-// term := function_call | primary
-// function_call := identifier '(' (expression (',' expression)*)?')'
-// primary := '(' expression ')' | identifier | number_constant | string_constant
-// identifier := [a-zA-Z][a-zA-Z0-9]*
-// number_constant := [0-9][0-9]*
-// string_constant := "'" [^']* "'"
-// op := '+' | '-'
 typedef struct ParseState {
   struct Token *token;
 } ParseState;
@@ -35,6 +22,7 @@ Node* parse_statement(ParseState *state);
 
 Node* node_alloc(NodeType type, int children_size) {
   Node *node = malloc(sizeof(Node));
+  node->value = "";
   node->type = type;
 
   int arg_size = 0;
@@ -75,6 +63,32 @@ Node* parse_primary(ParseState *state) {
     Node *node = node_alloc(NODE_IDENTIFIER, 0);
     node->value = state->token->value;
 
+    parse_state_next(state);
+    return node;
+  }
+
+  if (token_matches(state->token, TOKEN_KEYWORD, "undefined")) {
+    Node *node = node_alloc(NODE_PRIMITIVE_UNDEFINED, 0);
+    parse_state_next(state);
+    return node;
+  }
+
+  if (token_matches(state->token, TOKEN_KEYWORD, "null")) {
+    Node *node = node_alloc(NODE_PRIMITIVE_NULL, 0);
+    parse_state_next(state);
+    return node;
+  }
+
+  if (token_matches(state->token, TOKEN_KEYWORD, "true")) {
+    Node *node = node_alloc(NODE_PRIMITIVE_BOOLEAN, 0);
+    node->value = "true";
+    parse_state_next(state);
+    return node;
+  }
+
+  if (token_matches(state->token, TOKEN_KEYWORD, "false")) {
+    Node *node = node_alloc(NODE_PRIMITIVE_BOOLEAN, 0);
+    node->value = "false";
     parse_state_next(state);
     return node;
   }
@@ -203,7 +217,7 @@ Node* parse_return_statement(ParseState *state) {
 
 Node* parse_function_declaration(ParseState *state) {
   Token *head = state->token;
-  if (token_matches(head, TOKEN_IDENTIFIER, "function")) {
+  if (token_matches(head, TOKEN_KEYWORD, "function")) {
     parse_state_next(state);
 
     EXPECT_TOKEN_TYPE(head->next, TOKEN_IDENTIFIER);
@@ -277,7 +291,6 @@ Node* parse_variable_declaration_statement(ParseState *state) {
     EXPECT_TOKEN_TYPE(state->token, TOKEN_IDENTIFIER);
 
     Node *node = node_alloc(NODE_VAR_DECLARATION, 1);
-    node->value = "var";
 
     Node *identifier = node_alloc(NODE_IDENTIFIER, 0);
     identifier->value = state->token->value;
@@ -388,20 +401,21 @@ void node_pp(Node *node) {
   for (; node->children != NULL && node->children[size] != NULL; size++) ;
 
   if (size == 0) {
-    printf("%s", node->value);
+    const char *label;
+    if (node->type == NODE_PRIMITIVE_NUMBER || node->type == NODE_PRIMITIVE_BOOLEAN || node->type == NODE_IDENTIFIER) {
+      label = node->value;
+    } else {
+      label = NodeTypeString[node->type];
+    }
+
+    printf("%s", label);
     return;
   }
 
-  char *label;
-  if (node->type == NODE_PROGRAM) {
-    label = "program";
-  } else if (node->type == NODE_STATEMENT_IF) {
-    label = "if";
-  } else {
-    label = node->value;
+  printf("(%s", NodeTypeString[node->type]);
+  if (strlen(node->value) > 0) {
+    printf(" %s", node->value);
   }
-
-  printf("(%s", label);
 
   for (int i = 0; node->args[i] != NULL; i++) {
     printf(" ");

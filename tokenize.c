@@ -16,6 +16,15 @@ char *token_symbols[] = {
   NULL,
 };
 
+char *token_keywords[] = {
+  "null",
+  "undefined",
+  "true",
+  "false",
+  "function",
+  NULL,
+};
+
 Token* tokenize(char *source) {
   char *current = source;
   Token *head = malloc(sizeof(Token));
@@ -32,8 +41,24 @@ Token* tokenize(char *source) {
 
     int size = 1;
     if (isalpha(*current)) {
-      token->type = TOKEN_IDENTIFIER;
       for (; current[size] != '\0' && isalnum(current[size]); size++) ;
+
+      char *buf = calloc(size + 1, sizeof(char));
+      strncpy(buf, current, size);
+
+      int is_keyword = 0;
+      for (int i = 0; token_keywords[i] != NULL; i++) {
+        if (strcmp(buf, token_keywords[i]) == 0) {
+          is_keyword = 1;
+          break;
+        }
+      }
+
+      if (is_keyword) {
+        token->type = TOKEN_KEYWORD;
+      } else {
+        token->type = TOKEN_IDENTIFIER;
+      }
     } else if (isdigit(*current)) {
       token->type = TOKEN_NUMBER;
       for (; current[size] != '\0' && isdigit(current[size]); size++) ;

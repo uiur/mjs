@@ -1,6 +1,9 @@
 typedef enum ValueType {
   VALUE_NUMBER,
   VALUE_FUNCTION,
+  VALUE_BOOLEAN,
+  VALUE_NULL,
+  VALUE_UNDEFINED
 } ValueType;
 
 typedef struct Value {

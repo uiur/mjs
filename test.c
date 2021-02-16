@@ -47,6 +47,11 @@ void test_hash() {
 
 void test_example() {
   eval("1;");
+  eval("undefined;");
+  eval("null;");
+  eval("true;");
+  eval("false;");
+
   eval("1 + 2;");
   eval("1 * 2;");
   eval("1 * 2 + 3;");
