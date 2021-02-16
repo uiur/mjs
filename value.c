@@ -35,6 +35,19 @@ Value* value_new(ValueType type) {
   return v;
 }
 
+Value* value_true_new() {
+  Value *v = value_new(VALUE_BOOLEAN);
+  v->value = 1;
+  return v;
+}
+
+Value* value_false_new() {
+  Value *v = value_new(VALUE_BOOLEAN);
+  v->value = 0;
+  return v;
+}
+
+
 Value* value_number_new(double n) {
   Value *number = malloc(sizeof(Value));
   number->type = VALUE_NUMBER;
@@ -52,6 +65,23 @@ int value_is_truthy(Value *value) {
   return 1;
 }
 
+char* value_inspect(Value *v) {
+  char *buf = malloc(100 * sizeof(char));
+  if (v->type == VALUE_NUMBER) {
+    double n = v->value;
+    sprintf(buf, "%.0f\n", n);
+    return buf;
+  } else if (v->type == VALUE_BOOLEAN) {
+    if (v->value == 1) {
+      return "true";
+    } else {
+      return "false";
+    }
+  }
+
+  return NULL;
+}
+
 Value* console_log(int size, Value **args) {
   for (int i = 0; i < size; i++) {
     Value *v = args[i];
@@ -60,13 +90,12 @@ Value* console_log(int size, Value **args) {
       abort();
     }
 
-    if (v->type == VALUE_NUMBER) {
-      double n = v->value;
-      printf("%.0f\n", n);
-    } else {
+    const char *str = value_inspect(v);
+    if (str == NULL) {
       fprintf(stderr, "log error: %d\n", v->type);
       abort();
     }
+    printf("%s", str);
   }
   return NULL;
 }
@@ -75,6 +104,18 @@ void assert_args_size(int size, int expected) {
   if (size != expected) {
     fprintf(stderr, "requires %d arguments, but %d\n", expected, size);
     abort();
+  }
+}
+
+Value* value_equal(int size, Value **args) {
+  assert_args_size(size, 2);
+  Value *left = args[0];
+  Value *right = args[1];
+
+  if (left->type == right->type && left->value == right->value) {
+    return value_true_new();
+  } else  {
+    return value_false_new();
   }
 }
 
@@ -266,6 +307,10 @@ Value* evaluate_node(Node *node, Env *env) {
         return value_number_divide(size, args);
       }
 
+      if (strcmp(identifier, "===") == 0) {
+        return value_equal(size, args);
+      }
+
       fprintf(stderr, "runtime error: `%s` is not defined\n", identifier);
       abort();
 
@@ -281,16 +326,14 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_PRIMITIVE_BOOLEAN: {
-      Value *v = value_new(VALUE_BOOLEAN);
       if (strcmp(node->value, "true") == 0) {
-        v->value = 1;
+        return value_true_new();
       } else if (strcmp(node->value, "false") == 0) {
-        v->value = 0;
+        return value_false_new();
       } else {
         fprintf(stderr, "runtime error: unexpected value for boolean: %s\n", node->value);
         abort();
       }
-      return v;
     }
 
     default:

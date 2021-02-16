@@ -56,6 +56,8 @@ void test_example() {
   eval("1 * 2;");
   eval("1 * 2 + 3;");
   eval("1 * (2 + 3);");
+  eval("1 === 2;");
+
   eval("log(1);");
   eval("log(1); log(2);");
   eval("log(1 + 2);");

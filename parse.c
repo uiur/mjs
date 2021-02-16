@@ -157,17 +157,20 @@ Node* parse_term(ParseState *state) {
   return NULL;
 }
 
-Node* parse_expression2(ParseState *state) {
+Node* parse_multiplicative_operation(ParseState *state) {
   Node *term = parse_term(state);
 
   if (state->token == NULL) return term;
 
-  int matched = token_matches(state->token, TOKEN_SYMBOL, "*") || token_matches(state->token, TOKEN_SYMBOL, "/");
+  int matched =
+    token_matches(state->token, TOKEN_SYMBOL, "*") ||
+    token_matches(state->token, TOKEN_SYMBOL, "/");
+
   if (!matched) return term;
 
   char *symbol = state->token->value;
   parse_state_next(state);
-  Node *expression = parse_expression2(state);
+  Node *expression = parse_multiplicative_operation(state);
 
   Node *node = node_alloc(NODE_BINARY_OPERATOR, 2);
   node->value = symbol;
@@ -178,11 +181,13 @@ Node* parse_expression2(ParseState *state) {
   return node;
 }
 
-Node* parse_expression(ParseState *state) {
-  Node *term = parse_expression2(state);
+Node* parse_additive_operation(ParseState *state) {
+  Node *term = parse_multiplicative_operation(state);
 
   if (state->token == NULL) return term;
-  int matched = token_matches(state->token, TOKEN_SYMBOL, "+") || token_matches(state->token, TOKEN_SYMBOL, "-");
+  int matched =
+    token_matches(state->token, TOKEN_SYMBOL, "+") ||
+    token_matches(state->token, TOKEN_SYMBOL, "-");
   if (!matched) return term;
 
   char *symbol = state->token->value;
@@ -196,6 +201,32 @@ Node* parse_expression(ParseState *state) {
   node->children[1] = expression;
 
   return node;
+
+}
+
+Node* parse_equality_operation(ParseState *state) {
+  Node *term = parse_additive_operation(state);
+
+  if (state->token == NULL) return term;
+  int matched =
+    token_matches(state->token, TOKEN_SYMBOL, "===");
+  if (!matched) return term;
+
+  char *symbol = state->token->value;
+  parse_state_next(state);
+  Node *expression = parse_expression(state);
+
+  Node *node = node_alloc(NODE_BINARY_OPERATOR, 2);
+  node->value = symbol;
+
+  node->children[0] = term;
+  node->children[1] = expression;
+
+  return node;
+}
+
+Node* parse_expression(ParseState *state) {
+  return parse_equality_operation(state);
 }
 
 Node* parse_return_statement(ParseState *state) {
