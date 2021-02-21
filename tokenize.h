@@ -28,6 +28,7 @@ static char *token_symbols[] = {
   "=",
   "(",
   ")",
+  "'",
   NULL,
 };
 

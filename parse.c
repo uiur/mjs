@@ -19,7 +19,6 @@ typedef struct ParseState {
 Node* parse_statement_list(ParseState *state);
 Node* parse_statement(ParseState *state);
 
-
 Node* node_alloc(NodeType type, int children_size) {
   Node *node = malloc(sizeof(Node));
   node->value = "";
@@ -93,12 +92,26 @@ Node* parse_primary(ParseState *state) {
     return node;
   }
 
+  if (token_matches(state->token, TOKEN_SYMBOL, "'")) {
+    parse_state_next(state);
+
+    EXPECT_TOKEN_TYPE(state->token, TOKEN_IDENTIFIER);
+    Node *node = node_alloc(NODE_PRIMITIVE_STRING, 0);
+    node->value = state->token->value;
+
+    parse_state_next(state);
+
+    parse_state_expect(state, "'");
+    return node;
+  }
+
   if (token_matches(state->token, TOKEN_SYMBOL, "(")) {
     parse_state_next(state);
     Node *expression = parse_expression(state);
     parse_state_expect(state, ")");
     return expression;
   }
+
 
   return NULL;
 }

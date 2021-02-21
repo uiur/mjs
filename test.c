@@ -50,6 +50,7 @@ void test_example() {
   eval("null;");
   eval("true;");
   eval("false;");
+  eval("'foobar';");
 
   eval("1 + 2;");
   eval("1 * 2;");
@@ -64,6 +65,7 @@ void test_example() {
   eval("log(1 + 2);");
   eval("var foo; foo = 1 + 2; log(foo);");
   eval("var foo; log(foo);");
+  eval("var s; s = 'foo'; log(s);");
 
   eval("function add(a, b) { return a + b; } log(add(1, 2));");
   eval("if (1) { log(1); }");

@@ -56,6 +56,16 @@ Value* value_number_new(double n) {
   return number;
 }
 
+Value* value_string_new(const char *s) {
+  ValueString *v = malloc(sizeof(ValueString));
+  v->type = VALUE_STRING;
+  v->value = 0;
+  v->string = malloc(strlen(s) * sizeof(char));
+  strcpy(v->string, s);
+
+  return (Value*)v;
+}
+
 int value_is_truthy(Value *v) {
   switch (v->type) {
     case VALUE_NUMBER: {
@@ -81,6 +91,11 @@ char* value_inspect(Value *v) {
       double n = v->value;
       sprintf(buf, "%.0f", n);
       return buf;
+    }
+
+    case VALUE_STRING: {
+      ValueString *vs = (ValueString*)v;
+      return vs->string;
     }
 
     case VALUE_BOOLEAN: {
@@ -116,7 +131,7 @@ Value* console_log(int size, Value **args) {
 
     const char *str = value_inspect(v);
     if (str == NULL) {
-      fprintf(stderr, "log error: %d\n", v->type);
+      fprintf(stderr, "log error: type %s cannot be inspect\n", ValueTypeString[v->type]);
       abort();
     }
     printf("%s\n", str);
@@ -390,6 +405,10 @@ Value* evaluate_node(Node *node, Env *env) {
         fprintf(stderr, "runtime error: unexpected value for boolean: %s\n", node->value);
         abort();
       }
+    }
+
+    case NODE_PRIMITIVE_STRING: {
+      return value_string_new(node->value);
     }
 
     default:

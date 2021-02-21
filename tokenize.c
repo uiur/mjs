@@ -5,8 +5,6 @@
 #include <string.h>
 #include <assert.h>
 
-
-
 Token* tokenize(char *source) {
   char *current = source;
   Token *head = malloc(sizeof(Token));
