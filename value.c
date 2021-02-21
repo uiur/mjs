@@ -76,15 +76,30 @@ int value_is_truthy(Value *v) {
 
 char* value_inspect(Value *v) {
   char *buf = malloc(100 * sizeof(char));
-  if (v->type == VALUE_NUMBER) {
-    double n = v->value;
-    sprintf(buf, "%.0f", n);
-    return buf;
-  } else if (v->type == VALUE_BOOLEAN) {
-    if (v->value == 1) {
-      return "true";
-    } else {
-      return "false";
+  switch (v->type) {
+    case VALUE_NUMBER: {
+      double n = v->value;
+      sprintf(buf, "%.0f", n);
+      return buf;
+    }
+
+    case VALUE_BOOLEAN: {
+      if (v->value == 1) {
+        return "true";
+      } else {
+        return "false";
+      }
+    }
+    case VALUE_NULL: {
+      return "null";
+    }
+
+    case VALUE_UNDEFINED: {
+      return "undefined";
+    }
+
+    default: {
+      return NULL;
     }
   }
 
@@ -262,8 +277,8 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_VAR_DECLARATION: {
-      // env
-
+      Node *identifier = node->children[0];
+      hash_table_set(env->table, identifier->value, value_new(VALUE_UNDEFINED));
       break;
     }
 

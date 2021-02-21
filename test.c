@@ -63,6 +63,7 @@ void test_example() {
   eval("log(1); log(2);");
   eval("log(1 + 2);");
   eval("var foo; foo = 1 + 2; log(foo);");
+  eval("var foo; log(foo);");
 
   eval("function add(a, b) { return a + b; } log(add(1, 2));");
   eval("if (1) { log(1); }");
