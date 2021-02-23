@@ -68,6 +68,9 @@ void test_example() {
   eval("console.log(1);");
   eval("console.log(1); console.log(2);");
   eval("console.log(1 + 2);");
+
+  eval("var foo;");
+  eval("var foo = 1;");
   eval("var foo; foo = 1 + 2; console.log(foo);");
   eval("var foo; console.log(foo);");
   eval("var s; s = 'foo'; console.log(s);");

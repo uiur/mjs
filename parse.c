@@ -346,7 +346,7 @@ Node* parse_variable_declaration_statement(ParseState *state) {
 
     EXPECT_TOKEN_TYPE(state->token, TOKEN_IDENTIFIER);
 
-    Node *node = node_alloc(NODE_VAR_DECLARATION, 1);
+    Node *node = node_alloc(NODE_VAR_DECLARATION, 2);
 
     Node *identifier = node_alloc(NODE_IDENTIFIER, 0);
     identifier->value = state->token->value;
@@ -354,6 +354,15 @@ Node* parse_variable_declaration_statement(ParseState *state) {
     node->children[0] = identifier;
 
     parse_state_next(state);
+
+    if (token_matches(state->token, TOKEN_SYMBOL, "=")) {
+      parse_state_next(state);
+      Node *expression = parse_expression(state);
+      node->children[1] = expression;
+    } else {
+      node->children[1] = NULL;
+    }
+
     parse_state_expect(state, ";");
 
     return node;

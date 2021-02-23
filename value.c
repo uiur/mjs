@@ -326,7 +326,11 @@ Value* evaluate_node(Node *node, Env *env) {
 
     case NODE_VAR_DECLARATION: {
       Node *identifier = node->children[0];
-      env_set(env, identifier->value, value_undefined_new());
+      Node *right = node->children[1];
+
+      Value *value = right == NULL ? value_undefined_new() : evaluate_node(right, env);
+
+      env_set(env, identifier->value, value);
       break;
     }
 
