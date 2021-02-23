@@ -2,6 +2,7 @@
 #include "parse.h"
 #include "hash.h"
 #include "value.h"
+#include "object.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,19 +64,6 @@ Value* value_string_new(const char *s) {
   strcpy(v->string, s);
 
   return (Value*)v;
-}
-
-Value* value_object_new() {
-  ValueObject *v = malloc(sizeof(ValueObject));
-  v->type = VALUE_OBJECT;
-  v->value = 0;
-  v->table = hash_table_new();
-
-  return (Value*)v;
-}
-
-void value_object_set(ValueObject *object, ValueString *key, Value *value) {
-  hash_table_set(object->table, key->string, value);
 }
 
 int value_is_truthy(Value *v) {

@@ -1,3 +1,6 @@
+#ifndef MJS_HASH_H
+#define MJS_HASH_H
+
 typedef struct HashTable {
   unsigned int cap;
   unsigned int used;
@@ -13,3 +16,5 @@ typedef struct HashTableEntry {
 HashTable* hash_table_new();
 void hash_table_set(HashTable *hash, const char *key, void *value);
 void* hash_table_get(HashTable *hash, const char *key);
+
+#endif

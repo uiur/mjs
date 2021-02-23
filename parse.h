@@ -1,3 +1,8 @@
+#ifndef MJS_PARSE_H
+#define MJS_PARSE_H
+
+#include "tokenize.h"
+
 #define NODE_ENUM(M) \
   M(PRIMITIVE_NUMBER) \
   M(PRIMITIVE_STRING) \
@@ -37,3 +42,5 @@ typedef struct Node {
 
 Node* parse(Token *token);
 void node_pp(Node *node);
+
+#endif

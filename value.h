@@ -1,3 +1,7 @@
+#ifndef MJS_VALUE_H
+#define MJS_VALUE_H
+
+#include "parse.h"
 #define VALUE_ENUM(M) \
   M(VALUE_NUMBER) \
   M(VALUE_STRING) \
@@ -31,12 +35,6 @@ typedef struct ValueString {
   char *string;
 } ValueString;
 
-typedef struct ValueObject {
-  ValueType type;
-  double value;
-  struct Node *node;
-
-  struct HashTable *table;
-} ValueObject;
-
 Value* evaluate(Node *node);
+
+#endif

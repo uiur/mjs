@@ -1,5 +1,7 @@
-#include <stdlib.h>
+#ifndef MJS_TOKENIZE_H
+#define MJS_TOKENIZE_H
 
+#include <stdlib.h>
 typedef enum TokenType {
   TOKEN_ANY,
   TOKEN_NUMBER,
@@ -44,3 +46,5 @@ static char *token_keywords[] = {
   "return",
   NULL,
 };
+
+#endif
