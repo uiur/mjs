@@ -12,6 +12,16 @@ int token_matches(Token *token, TokenType type, const char *value) {
   return token->type == type && strcmp(token->value, value) == 0;
 }
 
+int token_matches_any(Token *token, TokenType type, const char *values[]) {
+  for (int i = 0; values[i] != NULL; i++) {
+    if (token_matches(token, type, values[i])) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 typedef struct ParseState {
   struct Token *token;
 } ParseState;
@@ -218,73 +228,67 @@ Node* parse_term(ParseState *state) {
   return NULL;
 }
 
+const char *multiplicative_symbols[] =  { "*", "/", NULL };
 Node* parse_multiplicative_operation(ParseState *state) {
   Node *term = parse_term(state);
+  Node *node = term;
 
-  if (state->token == NULL) return term;
+  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, multiplicative_symbols)) {
+    char *symbol = state->token->value;
+    parse_state_next(state);
 
-  int matched =
-    token_matches(state->token, TOKEN_SYMBOL, "*") ||
-    token_matches(state->token, TOKEN_SYMBOL, "/");
+    Node *left = node;
+    node = node_alloc(NODE_BINARY_OPERATOR, 2);
+    node->value = symbol;
 
-  if (!matched) return term;
+    Node *right = parse_term(state);
 
-  char *symbol = state->token->value;
-  parse_state_next(state);
-  Node *expression = parse_multiplicative_operation(state);
-
-  Node *node = node_alloc(NODE_BINARY_OPERATOR, 2);
-  node->value = symbol;
-
-  node->children[0] = term;
-  node->children[1] = expression;
+    node->children[0] = left;
+    node->children[1] = right;
+  }
 
   return node;
 }
 
+const char *additive_symbols[] =  { "+", "-", NULL };
 Node* parse_additive_operation(ParseState *state) {
   Node *term = parse_multiplicative_operation(state);
 
-  if (state->token == NULL) return term;
-  int matched =
-    token_matches(state->token, TOKEN_SYMBOL, "+") ||
-    token_matches(state->token, TOKEN_SYMBOL, "-");
-  if (!matched) return term;
+  Node *node = term;
+  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, additive_symbols)) {
+    char *symbol = state->token->value;
+    parse_state_next(state);
 
-  char *symbol = state->token->value;
-  parse_state_next(state);
-  Node *expression = parse_expression(state);
+    Node *left = node;
+    node = node_alloc(NODE_BINARY_OPERATOR, 2);
+    node->value = symbol;
 
-  Node *node = node_alloc(NODE_BINARY_OPERATOR, 2);
-  node->value = symbol;
+    Node *right = parse_multiplicative_operation(state);
 
-  node->children[0] = term;
-  node->children[1] = expression;
+    node->children[0] = left;
+    node->children[1] = right;
+  }
 
   return node;
-
 }
 
+const char *equality_symbols[] =  { "===", ">", "<", NULL };
 Node* parse_equality_operation(ParseState *state) {
   Node *term = parse_additive_operation(state);
+  Node *node = term;
+  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, equality_symbols)) {
+    char *symbol = state->token->value;
+    parse_state_next(state);
 
-  if (state->token == NULL) return term;
-  int matched =
-    token_matches(state->token, TOKEN_SYMBOL, "===") ||
-    token_matches(state->token, TOKEN_SYMBOL, ">") ||
-    token_matches(state->token, TOKEN_SYMBOL, "<");
-    ;
-  if (!matched) return term;
+    Node *left = node;
+    node = node_alloc(NODE_BINARY_OPERATOR, 2);
+    node->value = symbol;
 
-  char *symbol = state->token->value;
-  parse_state_next(state);
-  Node *expression = parse_expression(state);
+    Node *right = parse_additive_operation(state);
 
-  Node *node = node_alloc(NODE_BINARY_OPERATOR, 2);
-  node->value = symbol;
-
-  node->children[0] = term;
-  node->children[1] = expression;
+    node->children[0] = left;
+    node->children[1] = right;
+  }
 
   return node;
 }

@@ -55,7 +55,8 @@ void test_example() {
 
   eval("1 + 2;");
   eval("1 * 2;");
-  eval("1 * 2 + 3;");
+  eval("1 + 2 * 3;");
+  eval("3 - 2 - 1;");
   eval("1 * (2 + 3);");
   eval("1 === 2;");
   eval("1 > 2;");
@@ -70,6 +71,8 @@ void test_example() {
   eval("var foo; foo = 1 + 2; log(foo);");
   eval("var foo; log(foo);");
   eval("var s; s = 'foo'; log(s);");
+
+  eval("var o = { foo: 1 }; log(o.foo); ");
 
   eval("function add(a, b) { return a + b; } log(add(1, 2));");
   eval("if (1) { log(1); }");

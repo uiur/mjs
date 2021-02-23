@@ -57,7 +57,6 @@ Value* value_number_new(double n) {
   return number;
 }
 
-
 int value_is_truthy(Value *v) {
   switch (v->type) {
     case VALUE_NUMBER: {
