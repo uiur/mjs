@@ -75,6 +75,7 @@ void test_example() {
   eval("var o; o = { foo: 1 }; log(o.foo); ");
 
   eval("function add(a, b) { return a + b; } log(add(1, 2));");
+  eval("function add(a, b) { return a + b; } var o; o = { plus: add }; log(o.plus(1, 2));");
   eval("if (1) { log(1); }");
   eval("if (1 < 2) { log(1 < 2); }");
 }

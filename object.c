@@ -17,5 +17,9 @@ void value_object_set(ValueObject *object, ValueString *key, Value *value) {
 }
 
 Value* value_object_get(ValueObject *object, ValueString *key) {
-  return (Value*)hash_table_get(object->table, key->string);
+  Value *v = hash_table_get(object->table, key->string);
+  if (v == NULL) {
+    return value_undefined_new();
+  }
+  return v;
 }

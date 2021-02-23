@@ -8,6 +8,20 @@
 
 #define EXPECT_TOKEN_TYPE(TOKEN, TYPE) if ((TOKEN)->type != TYPE) { fprintf(stderr, "expect token type %s, but got %s\n", #TYPE, NodeTypeString[(TOKEN)->type]); abort(); }
 
+#define PARSE_BINARY_OPERATION(SYMBOLS, NEXT) \
+  Node *node = NEXT(state); \
+  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, SYMBOLS)) { \
+    char *symbol = state->token->value; \
+    parse_state_next(state); \
+    \
+    Node *left = node; \
+    node = node_alloc(NODE_BINARY_OPERATOR, 2); \
+    node->value = symbol; \
+    node->children[0] = left; \
+    node->children[1] = NEXT(state); \
+  } \
+  return node;
+
 int token_matches(Token *token, TokenType type, const char *value) {
   return token->type == type && strcmp(token->value, value) == 0;
 }
@@ -132,46 +146,39 @@ Node* parse_primary(ParseState *state) {
   return NULL;
 }
 
+const char *dot_symbols[] =  { ".", NULL };
+Node* parse_reference(ParseState *state) {
+  PARSE_BINARY_OPERATION(dot_symbols, parse_identifier)
+}
+
 Node* parse_function_call(ParseState *state) {
-  Token *current = state->token;
-  if (current->type == TOKEN_IDENTIFIER) {
-    if (strcmp(current->next->value, "(") == 0) {
-      Node *node = node_alloc(NODE_FUNCTION_CALL, 0);
-      node->value = current->value;
+  Node *identifier = parse_reference(state);
+  if (identifier == NULL) return NULL;
+  if (!token_matches(state->token, TOKEN_SYMBOL, "(")) return identifier;
+  parse_state_next(state);
 
-      parse_state_next(state);
-      parse_state_next(state);
+  Node *node = node_alloc(NODE_FUNCTION_CALL, 1);
+  node->children[0] = identifier;
 
-      int i = 0;
-      while(1) {
-        Node *expression = parse_expression(state);
-        if (expression == NULL) break;
+  int i = 1;
+  while (1) {
+    Node *expression = parse_expression(state);
+    if (expression == NULL) break;
 
-        int size = i + 1;
-        node->children = realloc(node->children, (size + 1) * sizeof(Node*));
-        node->children[i] = expression;
-        node->children[size] = NULL;
+    int size = i + 1;
+    node->children = realloc(node->children, (size + 1) * sizeof(Node*));
+    node->children[i] = expression;
+    node->children[size] = NULL;
 
-        if (!token_matches(state->token, TOKEN_ANY, ",")) break;
-        parse_state_next(state);
-
-        i++;
-      }
-
-      parse_state_expect(state, ")");
-
-      return node;
-    }
-
-    Node *node = malloc(sizeof(Node));
-    node->type = NODE_IDENTIFIER;
-    node->value = current->value;
-
+    if (!token_matches(state->token, TOKEN_ANY, ",")) break;
     parse_state_next(state);
-    return node;
+
+    i++;
   }
 
-  return NULL;
+  parse_state_expect(state, ")");
+
+  return node;
 }
 
 Node* parse_object(ParseState *state) {
@@ -228,29 +235,9 @@ Node* parse_term(ParseState *state) {
   return NULL;
 }
 
-
-#define PARSE_BINARY_OPERATION(SYMBOLS, NEXT) \
-  Node *node = NEXT(state); \
-  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, SYMBOLS)) { \
-    char *symbol = state->token->value; \
-    parse_state_next(state); \
-    \
-    Node *left = node; \
-    node = node_alloc(NODE_BINARY_OPERATOR, 2); \
-    node->value = symbol; \
-    node->children[0] = left; \
-    node->children[1] = NEXT(state); \
-  } \
-  return node;
-
-const char *dot_symbols[] =  { ".", NULL };
-Node* parse_dot_operation(ParseState *state) {
-  PARSE_BINARY_OPERATION(dot_symbols, parse_term)
-}
-
 const char *multiplicative_symbols[] =  { "*", "/", NULL };
 Node* parse_multiplicative_operation(ParseState *state) {
-  PARSE_BINARY_OPERATION(multiplicative_symbols, parse_dot_operation)
+  PARSE_BINARY_OPERATION(multiplicative_symbols, parse_term)
 }
 
 const char *additive_symbols[] =  { "+", "-", NULL };

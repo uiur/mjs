@@ -9,6 +9,12 @@
 #include <string.h>
 #include <ctype.h>
 
+#define RUNTIME_ERROR(...) \
+  fprintf(stderr, "runtime error: "); \
+  fprintf(stderr, __VA_ARGS__); \
+  fprintf(stderr, " (%s:%d)\n", __FILE__, __LINE__); \
+  abort();
+
 typedef struct Env {
   struct HashTable *table;
   struct Env *parent;
@@ -47,6 +53,10 @@ Value* value_false_new() {
   Value *v = value_new(VALUE_BOOLEAN);
   v->value = 0;
   return v;
+}
+
+Value* value_undefined_new() {
+  return value_new(VALUE_UNDEFINED);
 }
 
 Value* value_number_new(double n) {
@@ -104,12 +114,24 @@ char* value_inspect(Value *v) {
       return "undefined";
     }
 
+    case VALUE_FUNCTION: {
+      return "function";
+    }
+
     default: {
       return NULL;
     }
   }
 
   return NULL;
+}
+
+void value_pp(Value *v) {
+  if (v == NULL) {
+    RUNTIME_ERROR("unexpected NULL");
+  }
+  char *s = value_inspect(v);
+  printf("%s\n", s);
 }
 
 Value* console_log(int size, Value **args) {
@@ -323,13 +345,12 @@ Value* evaluate_node(Node *node, Env *env) {
       return NULL;
     }
 
-    case NODE_BINARY_OPERATOR:
-    case NODE_FUNCTION_CALL: {
+    case NODE_BINARY_OPERATOR: {
       char *identifier = node->value;
+      Node **children = node->children;
 
       int size = 0;
-      while(node->children[size] != NULL) size++;
-
+      while(children[size] != NULL) size++;
       if (strcmp(identifier, ".") == 0) {
         Value *receiver = evaluate_node(node->children[0], env);
         if (receiver->type != VALUE_OBJECT) {
@@ -340,18 +361,14 @@ Value* evaluate_node(Node *node, Env *env) {
         Node *message_node = node->children[1];
         Value *message = value_string_new(message_node->value);
 
-        return value_object_get((ValueObject*)receiver, (ValueString*)message);
+        Value *v = value_object_get((ValueObject*)receiver, (ValueString*)message);
+        value_pp(v);
+        return v;
       }
 
       Value **args = malloc(size * sizeof(Value));
-      for (int i = 0; node->children[i] != NULL; i++) {
-        args[i] = evaluate_node(node->children[i], env);
-      }
-
-      Value *value = env_get(env, identifier);
-      if (value != NULL && value->type == VALUE_FUNCTION) {
-        Value *return_value = evaluate_function_call(value, args, size, env);
-        return return_value;
+      for (int i = 0; children[i] != NULL; i++) {
+        args[i] = evaluate_node(children[i], env);
       }
 
       if (strcmp(identifier, "log") == 0) {
@@ -386,8 +403,37 @@ Value* evaluate_node(Node *node, Env *env) {
         return value_less_than(size, args);
       }
 
-      fprintf(stderr, "runtime error: `%s` is not defined\n", identifier);
+      fprintf(stderr, "runtime error: operator `%s` is not defined\n", identifier);
       abort();
+    }
+
+    case NODE_FUNCTION_CALL: {
+      Node *reference = node->children[0];
+      Node **children = (node->children) + 1;
+
+      int size = 0;
+      while(children[size] != NULL) size++;
+
+      Value **args = malloc(size * sizeof(Value));
+      for (int i = 0; children[i] != NULL; i++) {
+        args[i] = evaluate_node(children[i], env);
+      }
+
+      Value *value = evaluate_node(reference, env);
+      if (value != NULL) {
+        if (value->type != VALUE_FUNCTION) {
+          RUNTIME_ERROR("`%s` is not function", value_inspect(value));
+        }
+
+        Value *return_value = evaluate_function_call(value, args, size, env);
+        return return_value;
+      }
+
+      if (strcmp(reference->value, "log") == 0) {
+        return console_log(size, args);
+      }
+
+      RUNTIME_ERROR("function `%s` is not defined", reference->value);
 
       break;
     }
@@ -423,7 +469,7 @@ Value* evaluate_node(Node *node, Env *env) {
         Node *value_node = entry->children[1];
 
         Value *vs = value_string_new(identifier_node->value);
-        Value *v = evaluate(value_node);
+        Value *v = evaluate_node(value_node, env);
 
         value_object_set((ValueObject*)object, (ValueString*)vs, v);
       }

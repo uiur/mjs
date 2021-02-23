@@ -44,5 +44,6 @@ typedef struct ValueString {
 } ValueString;
 
 Value* evaluate(Node *node);
+Value* value_undefined_new();
 
 #endif
