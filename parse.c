@@ -228,69 +228,39 @@ Node* parse_term(ParseState *state) {
   return NULL;
 }
 
+
+#define PARSE_BINARY_OPERATION(SYMBOLS, NEXT) \
+  Node *node = NEXT(state); \
+  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, SYMBOLS)) { \
+    char *symbol = state->token->value; \
+    parse_state_next(state); \
+    \
+    Node *left = node; \
+    node = node_alloc(NODE_BINARY_OPERATOR, 2); \
+    node->value = symbol; \
+    node->children[0] = left; \
+    node->children[1] = NEXT(state); \
+  } \
+  return node;
+
+const char *dot_symbols[] =  { ".", NULL };
+Node* parse_dot_operation(ParseState *state) {
+  PARSE_BINARY_OPERATION(dot_symbols, parse_term)
+}
+
 const char *multiplicative_symbols[] =  { "*", "/", NULL };
 Node* parse_multiplicative_operation(ParseState *state) {
-  Node *term = parse_term(state);
-  Node *node = term;
-
-  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, multiplicative_symbols)) {
-    char *symbol = state->token->value;
-    parse_state_next(state);
-
-    Node *left = node;
-    node = node_alloc(NODE_BINARY_OPERATOR, 2);
-    node->value = symbol;
-
-    Node *right = parse_term(state);
-
-    node->children[0] = left;
-    node->children[1] = right;
-  }
-
-  return node;
+  PARSE_BINARY_OPERATION(multiplicative_symbols, parse_dot_operation)
 }
 
 const char *additive_symbols[] =  { "+", "-", NULL };
 Node* parse_additive_operation(ParseState *state) {
-  Node *term = parse_multiplicative_operation(state);
-
-  Node *node = term;
-  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, additive_symbols)) {
-    char *symbol = state->token->value;
-    parse_state_next(state);
-
-    Node *left = node;
-    node = node_alloc(NODE_BINARY_OPERATOR, 2);
-    node->value = symbol;
-
-    Node *right = parse_multiplicative_operation(state);
-
-    node->children[0] = left;
-    node->children[1] = right;
-  }
-
-  return node;
+  PARSE_BINARY_OPERATION(additive_symbols, parse_multiplicative_operation)
 }
 
 const char *equality_symbols[] =  { "===", ">", "<", NULL };
 Node* parse_equality_operation(ParseState *state) {
-  Node *term = parse_additive_operation(state);
-  Node *node = term;
-  while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, equality_symbols)) {
-    char *symbol = state->token->value;
-    parse_state_next(state);
-
-    Node *left = node;
-    node = node_alloc(NODE_BINARY_OPERATOR, 2);
-    node->value = symbol;
-
-    Node *right = parse_additive_operation(state);
-
-    node->children[0] = left;
-    node->children[1] = right;
-  }
-
-  return node;
+  PARSE_BINARY_OPERATION(equality_symbols, parse_additive_operation)
 }
 
 Node* parse_expression(ParseState *state) {

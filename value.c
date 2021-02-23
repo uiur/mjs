@@ -330,6 +330,19 @@ Value* evaluate_node(Node *node, Env *env) {
       int size = 0;
       while(node->children[size] != NULL) size++;
 
+      if (strcmp(identifier, ".") == 0) {
+        Value *receiver = evaluate_node(node->children[0], env);
+        if (receiver->type != VALUE_OBJECT) {
+          fprintf(stderr, "runtime error: expected object, but got %s", value_inspect(receiver));
+          abort();
+        }
+
+        Node *message_node = node->children[1];
+        Value *message = value_string_new(message_node->value);
+
+        return value_object_get((ValueObject*)receiver, (ValueString*)message);
+      }
+
       Value **args = malloc(size * sizeof(Value));
       for (int i = 0; node->children[i] != NULL; i++) {
         args[i] = evaluate_node(node->children[i], env);

@@ -15,3 +15,7 @@ Value* value_object_new() {
 void value_object_set(ValueObject *object, ValueString *key, Value *value) {
   hash_table_set(object->table, key->string, value);
 }
+
+Value* value_object_get(ValueObject *object, ValueString *key) {
+  return (Value*)hash_table_get(object->table, key->string);
+}
