@@ -21,27 +21,29 @@ static const char *ValueTypeString[] = {
   NODE_ENUM(VALUE_ENUM_TO_STRING)
 };
 
+#define VALUE_COMMON \
+  ValueType type; \
+  double value
+
 typedef struct Value {
-  ValueType type;
-  double value;
-  struct Node *node;
+  VALUE_COMMON;
 } Value;
 
 typedef struct ValueObject {
-  ValueType type;
-  double value;
-  struct Node *node;
-
+  VALUE_COMMON;
   struct HashTable *table;
 } ValueObject;
 
 typedef struct ValueString {
-  ValueType type;
-  double value;
-  struct Node *node;
-
+  VALUE_COMMON;
   char *string;
 } ValueString;
+
+typedef struct ValueFunction {
+  VALUE_COMMON;
+  char *name;
+  struct Node *node;
+} ValueFunction;
 
 Value* evaluate(Node *node);
 Value* value_undefined_new();

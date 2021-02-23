@@ -27,6 +27,7 @@ Env* env_new(Env *parent) {
   return env;
 }
 
+
 Value* env_get(Env *env, const char *key)  {
   if (env == NULL) return NULL;
 
@@ -35,6 +36,11 @@ Value* env_get(Env *env, const char *key)  {
 
   return env_get(env->parent, key);
 }
+
+void env_set(Env *env, const char *key, Value *value) {
+  hash_table_set(env->table, key, value);
+}
+
 
 Value* value_new(ValueType type) {
   Value *v = malloc(sizeof(Value));
@@ -65,6 +71,18 @@ Value* value_number_new(double n) {
   number->value = n;
 
   return number;
+}
+
+Value* value_function_new(Node *node) {
+  ValueFunction *function_value = malloc(sizeof(ValueFunction));
+  function_value->type = VALUE_FUNCTION;
+  function_value->node = node;
+  if (node != NULL) {
+    function_value->name = node->value;
+  } else {
+    function_value->name = "";
+  }
+  return (Value*)function_value;
 }
 
 int value_is_truthy(Value *v) {
@@ -265,7 +283,9 @@ Value* evaluate_node_children(Node *node, Env *env) {
   return result;
 }
 
-Value* evaluate_function_call(Value *value, Value **args, int size, Env *env) {
+Value* evaluate_function_call(ValueFunction *value, Value **args, int size, Env *env) {
+  if (strcmp(value->name, "__console_log__") == 0) return console_log(size, args);
+
   Node *node = value->node;
   ctx->returned = 0;
 
@@ -306,7 +326,7 @@ Value* evaluate_node(Node *node, Env *env) {
 
     case NODE_VAR_DECLARATION: {
       Node *identifier = node->children[0];
-      hash_table_set(env->table, identifier->value, value_new(VALUE_UNDEFINED));
+      env_set(env, identifier->value, value_undefined_new());
       break;
     }
 
@@ -314,18 +334,14 @@ Value* evaluate_node(Node *node, Env *env) {
       Node *identifier = node->children[0];
       Node *right = node->children[1];
 
-      hash_table_set(env->table, identifier->value, evaluate_node(right, env));
+      env_set(env, identifier->value, evaluate_node(right, env));
 
       break;
     }
 
     case NODE_FUNCTION_DECLARATION: {
-      Value *function_value = malloc(sizeof(Value));
-      function_value->type = VALUE_FUNCTION;
-      function_value->node = node;
-
-      hash_table_set(env->table, node->value, function_value);
-
+      Value *v = value_function_new(node);
+      env_set(env, node->value, v);
       break;
     }
 
@@ -361,18 +377,12 @@ Value* evaluate_node(Node *node, Env *env) {
         Node *message_node = node->children[1];
         Value *message = value_string_new(message_node->value);
 
-        Value *v = value_object_get((ValueObject*)receiver, (ValueString*)message);
-        value_pp(v);
-        return v;
+        return value_object_get((ValueObject*)receiver, (ValueString*)message);
       }
 
       Value **args = malloc(size * sizeof(Value));
       for (int i = 0; children[i] != NULL; i++) {
         args[i] = evaluate_node(children[i], env);
-      }
-
-      if (strcmp(identifier, "log") == 0) {
-        return console_log(size, args);
       }
 
       if (strcmp(identifier, "+") == 0) {
@@ -425,12 +435,9 @@ Value* evaluate_node(Node *node, Env *env) {
           RUNTIME_ERROR("`%s` is not function", value_inspect(value));
         }
 
-        Value *return_value = evaluate_function_call(value, args, size, env);
+        ValueFunction *function = (ValueFunction*)value;
+        Value *return_value = evaluate_function_call(function, args, size, env);
         return return_value;
-      }
-
-      if (strcmp(reference->value, "log") == 0) {
-        return console_log(size, args);
       }
 
       RUNTIME_ERROR("function `%s` is not defined", reference->value);
@@ -487,7 +494,21 @@ Value* evaluate_node(Node *node, Env *env) {
 
 }
 
-Value* evaluate(Node *node) {
+Env* env_global_new() {
   Env *global = env_new(NULL);
+
+  ValueFunction *f = (ValueFunction*)value_function_new(NULL);
+  f->name = "__console_log__";
+
+  Value *o = value_object_new();
+  value_object_set((ValueObject*)o, (ValueString*)value_string_new("log"), (Value*)f);
+  env_set(global, "console", o);
+
+  return global;
+}
+
+Value* evaluate(Node *node) {
+  Env *global = env_global_new();
+
   return evaluate_node(node, global);
 }

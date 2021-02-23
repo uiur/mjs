@@ -65,19 +65,19 @@ void test_example() {
   eval("{};");
   eval("{ foo: 1, bar: 2 };");
 
-  eval("log(1);");
-  eval("log(1); log(2);");
-  eval("log(1 + 2);");
-  eval("var foo; foo = 1 + 2; log(foo);");
-  eval("var foo; log(foo);");
-  eval("var s; s = 'foo'; log(s);");
+  eval("console.log(1);");
+  eval("console.log(1); console.log(2);");
+  eval("console.log(1 + 2);");
+  eval("var foo; foo = 1 + 2; console.log(foo);");
+  eval("var foo; console.log(foo);");
+  eval("var s; s = 'foo'; console.log(s);");
 
-  eval("var o; o = { foo: 1 }; log(o.foo); ");
+  eval("var o; o = { foo: 1 }; console.log(o.foo); ");
 
-  eval("function add(a, b) { return a + b; } log(add(1, 2));");
-  eval("function add(a, b) { return a + b; } var o; o = { plus: add }; log(o.plus(1, 2));");
-  eval("if (1) { log(1); }");
-  eval("if (1 < 2) { log(1 < 2); }");
+  eval("function add(a, b) { return a + b; } console.log(add(1, 2));");
+  eval("function add(a, b) { return a + b; } var o; o = { plus: add }; console.log(o.plus(1, 2));");
+  eval("if (1) { console.log(1); }");
+  eval("if (1 < 2) { console.log(1 < 2); }");
 }
 
 int main(int argc, char const **argv) {
