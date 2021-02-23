@@ -1,5 +1,6 @@
 #include "hash.h"
 #include "value.h"
+#include "object.h"
 #include <stdlib.h>
 
 Value* value_object_new() {

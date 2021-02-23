@@ -3,6 +3,7 @@
 #include "hash.h"
 #include "value.h"
 #include "object.h"
+#include "string.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,15 +57,6 @@ Value* value_number_new(double n) {
   return number;
 }
 
-Value* value_string_new(const char *s) {
-  ValueString *v = malloc(sizeof(ValueString));
-  v->type = VALUE_STRING;
-  v->value = 0;
-  v->string = malloc(strlen(s) * sizeof(char));
-  strcpy(v->string, s);
-
-  return (Value*)v;
-}
 
 int value_is_truthy(Value *v) {
   switch (v->type) {

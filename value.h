@@ -27,6 +27,14 @@ typedef struct Value {
   struct Node *node;
 } Value;
 
+typedef struct ValueObject {
+  ValueType type;
+  double value;
+  struct Node *node;
+
+  struct HashTable *table;
+} ValueObject;
+
 typedef struct ValueString {
   ValueType type;
   double value;
