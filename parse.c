@@ -49,6 +49,18 @@ void parse_state_expect(ParseState *state, char *str) {
 
 Node* parse_expression(ParseState *state);
 
+Node* parse_identifier(ParseState *state) {
+  if (state->token->type == TOKEN_IDENTIFIER) {
+    Node *node = node_alloc(NODE_IDENTIFIER, 0);
+    node->value = state->token->value;
+
+    parse_state_next(state);
+    return node;
+  }
+
+  return NULL;
+}
+
 Node* parse_primary(ParseState *state) {
   if (state->token->type == TOKEN_NUMBER) {
     Node *node = node_alloc(NODE_PRIMITIVE_NUMBER, 0);
@@ -58,13 +70,8 @@ Node* parse_primary(ParseState *state) {
     return node;
   }
 
-  if (state->token->type == TOKEN_IDENTIFIER) {
-    Node *node = node_alloc(NODE_IDENTIFIER, 0);
-    node->value = state->token->value;
-
-    parse_state_next(state);
-    return node;
-  }
+  Node *identfier = parse_identifier(state);
+  if (identfier != NULL) return identfier;
 
   if (token_matches(state->token, TOKEN_KEYWORD, "undefined")) {
     Node *node = node_alloc(NODE_PRIMITIVE_UNDEFINED, 0);
@@ -112,7 +119,6 @@ Node* parse_primary(ParseState *state) {
     return expression;
   }
 
-
   return NULL;
 }
 
@@ -158,6 +164,45 @@ Node* parse_function_call(ParseState *state) {
   return NULL;
 }
 
+Node* parse_object(ParseState *state) {
+  if (token_matches(state->token, TOKEN_SYMBOL, "{")) {
+    parse_state_next(state);
+
+    Node *node = node_alloc(NODE_OBJECT, 0);
+    int size = 0;
+    while (1) {
+      Node *identifier = parse_identifier(state);
+      if (identifier == NULL) break;
+
+      size++;
+
+      parse_state_expect(state, ":");
+
+      Node *value = parse_expression(state);
+      if (value == NULL) {
+        fprintf(stderr, "parse error: expect expression after : in object, but got NULL");
+        abort();
+      }
+
+      Node *entry = node_alloc(NODE_OBJECT_ENTRY, 2);
+      entry->children[0] = identifier;
+      entry->children[1] = value;
+
+      node->children = realloc(node->children, (size + 1) * sizeof(Node*));
+      node->children[size] = NULL;
+      node->children[size - 1] = entry;
+
+      if (!token_matches(state->token, TOKEN_ANY, ",")) break;
+      parse_state_next(state);
+    }
+
+    parse_state_expect(state, "}");
+    return node;
+  }
+
+  return NULL;
+}
+
 Node* parse_term(ParseState *state) {
   Node *node;
 
@@ -165,6 +210,9 @@ Node* parse_term(ParseState *state) {
   if (node != NULL) return node;
 
   node = parse_primary(state);
+  if (node != NULL) return node;
+
+  node = parse_object(state);
   if (node != NULL) return node;
 
   return NULL;

@@ -1,7 +1,7 @@
 #include "tokenize.h"
 #include "parse.h"
-#include "value.h"
 #include "hash.h"
+#include "value.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,7 +47,6 @@ Value* value_false_new() {
   return v;
 }
 
-
 Value* value_number_new(double n) {
   Value *number = malloc(sizeof(Value));
   number->type = VALUE_NUMBER;
@@ -64,6 +63,19 @@ Value* value_string_new(const char *s) {
   strcpy(v->string, s);
 
   return (Value*)v;
+}
+
+Value* value_object_new() {
+  ValueObject *v = malloc(sizeof(ValueObject));
+  v->type = VALUE_OBJECT;
+  v->value = 0;
+  v->table = hash_table_new();
+
+  return (Value*)v;
+}
+
+void value_object_set(ValueObject *object, ValueString *key, Value *value) {
+  hash_table_set(object->table, key->string, value);
 }
 
 int value_is_truthy(Value *v) {
@@ -409,6 +421,22 @@ Value* evaluate_node(Node *node, Env *env) {
 
     case NODE_PRIMITIVE_STRING: {
       return value_string_new(node->value);
+    }
+
+    case NODE_OBJECT: {
+      Value *object = value_object_new();
+      for (int i = 0; node->children[i] != NULL; i++) {
+        Node *entry = node->children[i];
+        Node *identifier_node = entry->children[0];
+        Node *value_node = entry->children[1];
+
+        Value *vs = value_string_new(identifier_node->value);
+        Value *v = evaluate(value_node);
+
+        value_object_set((ValueObject*)object, (ValueString*)vs, v);
+      }
+
+      return object;
     }
 
     default:

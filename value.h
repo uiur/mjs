@@ -1,6 +1,7 @@
 #define VALUE_ENUM(M) \
   M(VALUE_NUMBER) \
   M(VALUE_STRING) \
+  M(VALUE_OBJECT) \
   M(VALUE_FUNCTION) \
   M(VALUE_BOOLEAN) \
   M(VALUE_NULL) \
@@ -26,7 +27,16 @@ typedef struct ValueString {
   ValueType type;
   double value;
   struct Node *node;
+
   char *string;
 } ValueString;
+
+typedef struct ValueObject {
+  ValueType type;
+  double value;
+  struct Node *node;
+
+  struct HashTable *table;
+} ValueObject;
 
 Value* evaluate(Node *node);
