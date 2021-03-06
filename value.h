@@ -6,10 +6,12 @@
   M(VALUE_NUMBER) \
   M(VALUE_STRING) \
   M(VALUE_OBJECT) \
+  M(VALUE_ARRAY) \
   M(VALUE_FUNCTION) \
   M(VALUE_BOOLEAN) \
   M(VALUE_NULL) \
   M(VALUE_UNDEFINED)
+
 #define VALUE_ENUM_TO_ENUM(X) X,
 #define VALUE_ENUM_TO_STRING(X) #X,
 
@@ -34,6 +36,13 @@ typedef struct ValueObject {
   struct HashTable *table;
 } ValueObject;
 
+typedef struct ValueArray {
+  VALUE_COMMON;
+  unsigned int cap;
+  unsigned int size;
+  struct Value** values;
+} ValueArray;
+
 typedef struct ValueString {
   VALUE_COMMON;
   char *string;
@@ -47,5 +56,6 @@ typedef struct ValueFunction {
 
 Value* evaluate(Node *node);
 Value* value_undefined_new();
+Value* value_number_new();
 
 #endif

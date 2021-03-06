@@ -65,17 +65,22 @@ void test_example() {
   eval("{};");
   eval("{ foo: 1, bar: 2 };");
 
+  eval("[];");
+  eval("[0, 1, 2];");
+
   eval("console.log(1);");
   eval("console.log(1); console.log(2);");
   eval("console.log(1 + 2);");
 
   eval("var foo;");
   eval("var foo = 1;");
+  eval("var foo = [1, 2, 3];");
   eval("var foo; foo = 1 + 2; console.log(foo);");
   eval("var foo; console.log(foo);");
   eval("var s; s = 'foo'; console.log(s);");
 
   eval("var o; o = { foo: 1 }; console.log(o.foo); ");
+  eval("var a = [1]; a[0]; ");
 
   eval("function add(a, b) { return a + b; } console.log(add(1, 2));");
   eval("function add(a, b) { return a + b; } var o; o = { plus: add }; console.log(o.plus(1, 2));");

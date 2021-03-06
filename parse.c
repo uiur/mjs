@@ -154,7 +154,24 @@ Node* parse_reference(ParseState *state) {
 Node* parse_function_call(ParseState *state) {
   Node *identifier = parse_reference(state);
   if (identifier == NULL) return NULL;
+
+  // a[0]
+  if (token_matches(state->token, TOKEN_SYMBOL, "[")) {
+    parse_state_next(state);
+
+    Node *expression = parse_expression(state);
+
+    Node *node = node_alloc(NODE_OBJECT_MEMBER_ACCESS, 2);
+    node->children[0] = identifier;
+    node->children[1] = expression;
+
+    parse_state_expect(state, "]");
+
+    return node;
+  }
+
   if (!token_matches(state->token, TOKEN_SYMBOL, "(")) return identifier;
+
   parse_state_next(state);
 
   Node *node = node_alloc(NODE_FUNCTION_CALL, 1);
@@ -181,6 +198,39 @@ Node* parse_function_call(ParseState *state) {
   return node;
 }
 
+
+void node_children_push(Node *node, Node *element) {
+  int size = 0;
+  while (node->children[size] != NULL) size++;
+  int new_size = size + 1;
+
+  node->children = realloc(node->children, (new_size + 1) * sizeof(Node*));
+  node->children[new_size - 1] = element;
+  node->children[new_size] = NULL;
+}
+
+Node* parse_array(ParseState *state) {
+  if (token_matches(state->token, TOKEN_SYMBOL, "[")) {
+    parse_state_next(state);
+
+    Node *node = node_alloc(NODE_ARRAY, 0);
+    while (1) {
+      Node *expression = parse_expression(state);
+      if (expression == NULL) break;
+
+      node_children_push(node, expression);
+
+      if (!token_matches(state->token, TOKEN_ANY, ",")) break;
+      parse_state_next(state);
+    }
+
+    parse_state_expect(state, "]");
+    return node;
+  }
+
+  return NULL;
+}
+
 Node* parse_object(ParseState *state) {
   if (token_matches(state->token, TOKEN_SYMBOL, "{")) {
     parse_state_next(state);
@@ -205,9 +255,7 @@ Node* parse_object(ParseState *state) {
       entry->children[0] = identifier;
       entry->children[1] = value;
 
-      node->children = realloc(node->children, (size + 1) * sizeof(Node*));
-      node->children[size] = NULL;
-      node->children[size - 1] = entry;
+      node_children_push(node, entry);
 
       if (!token_matches(state->token, TOKEN_ANY, ",")) break;
       parse_state_next(state);
@@ -254,6 +302,9 @@ Node* parse_term(ParseState *state) {
   if (node != NULL) return node;
 
   node = parse_object(state);
+  if (node != NULL) return node;
+
+  node = parse_array(state);
   if (node != NULL) return node;
 
   return NULL;

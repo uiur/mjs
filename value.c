@@ -3,6 +3,7 @@
 #include "hash.h"
 #include "value.h"
 #include "object.h"
+#include "array.h"
 #include "string.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,6 +74,10 @@ Value* value_number_new(double n) {
   return number;
 }
 
+double value_number_unwrap(Value* v) {
+  return v->value;
+}
+
 Value* value_function_new(Node *node) {
   ValueFunction *function_value = malloc(sizeof(ValueFunction));
   function_value->type = VALUE_FUNCTION;
@@ -124,6 +129,22 @@ char* value_inspect(Value *v) {
         return "false";
       }
     }
+
+    case VALUE_ARRAY: {
+      ValueArray *array = (ValueArray*)v;
+      strcat(buf, "[");
+      for (int i = 0; i < value_number_unwrap(value_array_length(array)); i++) {
+        if (i > 0) {
+          strcat(buf, ", ");
+        }
+        const char *s = value_inspect(value_array_get(array, value_number_new(i)));
+        strcat(buf, s);
+      }
+
+      strcat(buf, "]");
+      return buf;
+    }
+
     case VALUE_NULL: {
       return "null";
     }
@@ -395,13 +416,18 @@ Value* evaluate_node(Node *node, Env *env) {
       while(children[size] != NULL) size++;
       if (strcmp(identifier, ".") == 0) {
         Value *receiver = evaluate_node(node->children[0], env);
-        if (receiver->type != VALUE_OBJECT) {
-          fprintf(stderr, "runtime error: expected object, but got %s", value_inspect(receiver));
-          abort();
-        }
-
         Node *message_node = node->children[1];
         Value *message = value_string_new(message_node->value);
+
+        // array.length
+        if (receiver->type == VALUE_ARRAY && strcmp(message_node->value, "length") == 0) {
+          return value_array_length((ValueArray *)receiver);
+        }
+
+        if (receiver->type != VALUE_OBJECT) {
+          fprintf(stderr, "runtime error: expected object, but got %s\n", value_inspect(receiver));
+          abort();
+        }
 
         return value_object_get((ValueObject*)receiver, (ValueString*)message);
       }
@@ -508,6 +534,39 @@ Value* evaluate_node(Node *node, Env *env) {
       }
 
       return object;
+    }
+
+    case NODE_OBJECT_MEMBER_ACCESS: {
+      Value *v = evaluate_node(node->children[0], env);
+      Value *member = evaluate_node(node->children[1], env);
+
+      switch (v->type) {
+        case VALUE_OBJECT: {
+          return value_object_get((ValueObject*)v, (ValueString*)member);
+        }
+
+        case VALUE_ARRAY: {
+          return value_array_get((ValueArray*)v, member);
+        }
+
+        default: {
+          fprintf(stderr, "runtime error: unexpected member access: %s\n", ValueTypeString[v->type]);
+          abort();
+        }
+      }
+      return NULL;
+    }
+
+    case NODE_ARRAY: {
+      ValueArray *array = (ValueArray*)value_array_new();
+
+      for (int i = 0; node->children[i] != NULL; i++) {
+        Node *child = node->children[i];
+        Value *el = evaluate_node(child, env);
+        value_array_set(array, value_number_new(i), el);
+      }
+
+      return (Value*)array;
     }
 
     default:
