@@ -63,7 +63,7 @@ void parse_state_next(ParseState *state) {
 
 void parse_state_expect(ParseState *state, char *str) {
   if (strcmp(state->token->value, str) != 0) {
-    fprintf(stderr, "parse error: expect `%s`, but got `%s`\n", str, state->token->value);
+    fprintf(stderr, "parse error: expect `%s`, but got `%s` (%d:%d)\n", str, state->token->value, state->token->line, state->token->column);
     abort();
     return;
   }

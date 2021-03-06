@@ -14,6 +14,8 @@ typedef struct Token {
   TokenType type;
   char *value;
   struct Token *next;
+  unsigned int line;
+  unsigned int column;
 } Token;
 
 Token* tokenize(char *source);

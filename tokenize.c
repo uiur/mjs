@@ -5,19 +5,39 @@
 #include <string.h>
 #include <assert.h>
 
+Token* token_alloc() {
+  Token *token = malloc(sizeof(Token));
+  token->line = 0;
+  token->column = 0;
+  token->type = TOKEN_ANY;
+  token->next = NULL;
+
+  return token;
+}
+
 Token* tokenize(char *source) {
   char *current = source;
-  Token *head = malloc(sizeof(Token));
+  Token *head = token_alloc();
   Token *prev_token = head;
+  unsigned int line_number = 1;
+  unsigned int column_number = 1;
 
   while (*current != '\0') {
     if (isspace(*current)) {
+      if (*current == '\n') {
+        line_number += 1;
+        column_number = 1;
+      } else {
+        column_number += 1;
+      }
+
       current++;
       continue;
     }
-    Token *token = malloc(sizeof(Token));
-    token->type = TOKEN_ANY;
-    token->next = NULL;
+
+    Token *token = token_alloc();
+    token->line = line_number;
+    token->column = column_number;
 
     int size = 1;
     if (isalpha(*current)) {
@@ -60,6 +80,8 @@ Token* tokenize(char *source) {
 
     prev_token->next = token;
     prev_token = token;
+
+    column_number += size;
     current += size;
   }
 
