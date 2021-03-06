@@ -356,12 +356,47 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_VAR_ASSIGNMENT: {
-      Node *identifier = node->children[0];
+      Node *left = node->children[0];
       Node *right = node->children[1];
+      Value *right_value = evaluate_node(right, env);
 
-      env_set(env, identifier->value, evaluate_node(right, env));
+      switch (left->type) {
+        case NODE_IDENTIFIER: {
+          env_set(env, left->value, right_value);
+          break;
+        }
 
-      break;
+        case NODE_OBJECT_MEMBER_ACCESS: {
+          Value *v = evaluate_node(left->children[0], env);
+          Value *property = evaluate_node(left->children[1], env);
+
+          switch (v->type) {
+            case VALUE_OBJECT: {
+              value_object_set((ValueObject*)v, (ValueString*)property, right_value);
+              break;
+            }
+
+            case VALUE_ARRAY: {
+              value_array_set((ValueArray*)v, property, right_value);
+              break;
+            }
+
+            default: {
+              fprintf(stderr, "runtime error: unexpected member access: %s\n", ValueTypeString[v->type]);
+              abort();
+            }
+          }
+
+          break;
+        }
+
+        default: {
+          fprintf(stderr, "runtime error: unexpected node type for left of assignment: %s\n", NodeTypeString[left->type]);
+          abort();
+        }
+      }
+
+      return right_value;
     }
 
     case NODE_FUNCTION_DECLARATION: {
@@ -399,10 +434,10 @@ Value* evaluate_node(Node *node, Env *env) {
       Node *condition = node->args[1];
       Node *next = node->args[2];
 
-      evaluate_node(init, env);
+      if (init != NULL) evaluate_node(init, env);
       while (value_is_truthy(evaluate_node(condition, env))) {
         evaluate_node_children(node, env);
-        evaluate_node(next, env);
+        if (next != NULL) evaluate_node(next, env);
       }
 
       return NULL;
