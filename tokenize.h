@@ -47,7 +47,9 @@ static char *token_keywords[] = {
   "function",
   "var",
   "return",
+  "if",
   "while",
+  "for",
   NULL,
 };
 

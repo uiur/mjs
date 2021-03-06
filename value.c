@@ -373,6 +373,20 @@ Value* evaluate_node(Node *node, Env *env) {
       return NULL;
     }
 
+    case NODE_STATEMENT_FOR: {
+      Node *init = node->args[0];
+      Node *condition = node->args[1];
+      Node *next = node->args[2];
+
+      evaluate_node(init, env);
+      while (value_is_truthy(evaluate_node(condition, env))) {
+        evaluate_node_children(node, env);
+        evaluate_node(next, env);
+      }
+
+      return NULL;
+    }
+
     case NODE_BINARY_OPERATOR: {
       char *identifier = node->value;
       Node **children = node->children;
