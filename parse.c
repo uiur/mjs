@@ -371,6 +371,36 @@ Node* parse_variable_declaration_statement(ParseState *state) {
   return NULL;
 }
 
+Node* parse_while_statement(ParseState *state) {
+  if (token_matches(state->token, TOKEN_KEYWORD, "while")) {
+    parse_state_next(state);
+    Node *node = node_alloc(NODE_STATEMENT_WHILE, 0);
+
+    int arg_size = 1;
+    node->args = malloc((arg_size + 1) * sizeof(Node*));
+    node->args[arg_size] = NULL;
+
+    parse_state_expect(state, "(");
+
+    Node *expression = parse_expression(state);
+    node->args[0] = expression;
+
+    parse_state_expect(state, ")");
+    parse_state_expect(state, "{");
+
+    Node *statement_list = parse_statement_list(state);
+    node->children = statement_list->children;
+    free(statement_list);
+
+    parse_state_expect(state, "}");
+
+    return node;
+  }
+
+  return NULL;
+
+}
+
 Node* parse_if_statement(ParseState *state) {
   if (strcmp(state->token->value, "if") == 0) {
     parse_state_next(state);
@@ -414,6 +444,9 @@ Node* parse_statement(ParseState *state) {
 
   Node *if_statement = parse_if_statement(state);
   if (if_statement != NULL) return if_statement;
+
+  Node *while_statement = parse_while_statement(state);
+  if (while_statement != NULL) return while_statement;
 
   Node *return_statement = parse_return_statement(state);
   if (return_statement != NULL) return return_statement;

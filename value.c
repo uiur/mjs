@@ -365,6 +365,14 @@ Value* evaluate_node(Node *node, Env *env) {
       return NULL;
     }
 
+    case NODE_STATEMENT_WHILE: {
+      while (value_is_truthy(evaluate_node(node->args[0], env))) {
+        evaluate_node_children(node, env);
+      }
+
+      return NULL;
+    }
+
     case NODE_BINARY_OPERATOR: {
       char *identifier = node->value;
       Node **children = node->children;
