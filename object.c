@@ -21,12 +21,22 @@ Value* value_undefined_new() {
   return v;
 }
 
-Value* value_object_new() {
+Value* value_object_init() {
   Value *v = malloc(sizeof(Value));
   v->kind = VALUE_KIND_OBJECT;
   v->table = hash_table_new();
   v->proto = NULL;
   return v;
+}
+
+Value* value_object_create(Value *proto) {
+  Value *v = value_object_init();
+  v->proto = proto;
+  return v;
+}
+
+Value* value_object_new(Binding *binding) {
+  return value_object_create(binding->object_prototype);
 }
 
 void value_object_set(Value *object, Value *key, Value *value) {
@@ -47,8 +57,11 @@ Value* value_object_get(Value *object, Value *key) {
   if (s == NULL) return value_undefined_new();
 
   Value *v = hash_table_get(object->table, s);
-  if (v == NULL) {
-    return value_undefined_new();
+  if (v != NULL) return v;
+
+  if (object->proto != NULL && object->proto->kind == VALUE_KIND_OBJECT) {
+    return value_object_get(object->proto, key);
   }
-  return v;
+
+  return value_undefined_new();
 }

@@ -62,4 +62,8 @@ typedef struct Value {
 Value* evaluate(Node *node);
 Value* value_number_new();
 
+typedef struct Binding {
+  struct Value *object_prototype;
+} Binding;
+
 #endif

@@ -28,6 +28,16 @@ Env* env_new(Env *parent) {
   return env;
 }
 
+typedef struct CallContext {
+  int returned;
+} CallContext;
+
+CallContext context;
+CallContext *ctx = &context;
+
+Binding binding_data;
+Binding *binding = &binding_data;
+
 Value* env_get(Env *env, const char *key)  {
   if (env == NULL) return NULL;
 
@@ -41,8 +51,28 @@ void env_set(Env *env, const char *key, Value *value) {
   hash_table_set(env->table, key, value);
 }
 
+Value* value_number_new(double n) {
+  Value *v = value_object_create(NULL);
+  Primitive *primitive = malloc(sizeof(Primitive));
+  primitive->type = PRIMITIVE_NUMBER;
+  primitive->value = n;
+  v->primitive = primitive;
+
+  return v;
+}
+
+Value* require_object_prototype(Binding *binding) {
+  Value *proto = value_object_create(NULL);
+  binding->object_prototype = proto;
+  return binding->object_prototype;
+}
+
+void load_prelude() {
+  require_object_prototype(binding);
+}
+
 Value* value_true_new() {
-  Value *v = value_object_new();
+  Value *v = value_object_create(NULL);
 
   Primitive *primitive = malloc(sizeof(Primitive));
   primitive->type = PRIMITIVE_BOOLEAN;
@@ -53,7 +83,7 @@ Value* value_true_new() {
 }
 
 Value* value_false_new() {
-  Value *v = value_object_new();
+  Value *v = value_object_create(NULL);
 
   Primitive *primitive = malloc(sizeof(Primitive));
   primitive->type = PRIMITIVE_BOOLEAN;
@@ -63,22 +93,13 @@ Value* value_false_new() {
   return v;
 }
 
-Value* value_number_new(double n) {
-  Value *v = value_object_new();
-  Primitive *primitive = malloc(sizeof(Primitive));
-  primitive->type = PRIMITIVE_NUMBER;
-  primitive->value = n;
-  v->primitive = primitive;
-
-  return v;
-}
 
 double value_number_unwrap(Value* v) {
   return v->primitive->value;
 }
 
 Value* value_function_new(Node *node) {
-  Value *v = value_object_new();
+  Value *v = value_object_create(NULL);
 
   PrimitiveFunction *function_value = malloc(sizeof(PrimitiveFunction));
   function_value->type = PRIMITIVE_FUNCTION;
@@ -91,6 +112,12 @@ Value* value_function_new(Node *node) {
 
   v->primitive = (Primitive*)function_value;
 
+  return v;
+}
+
+Value* value_function_native_new(char *name) {
+  Value *v = value_function_new(NULL);
+  ((PrimitiveFunction*)v->primitive)->name = name;
   return v;
 }
 
@@ -202,6 +229,7 @@ Value* console_log(int size, Value **args) {
   return NULL;
 }
 
+
 void assert_args_size(int size, int expected) {
   if (size != expected) {
     fprintf(stderr, "requires %d arguments, but %d\n", expected, size);
@@ -293,12 +321,6 @@ Value* value_number_divide(int size, Value **args) {
 
 Value* evaluate_node(Node *node, Env *env);
 
-typedef struct CallContext {
-  int returned;
-} CallContext;
-
-CallContext context;
-CallContext *ctx = &context;
 
 Value* evaluate_node_children(Node *node, Env *env) {
   Value *result = NULL;
@@ -555,7 +577,7 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_OBJECT: {
-      Value *object = value_object_new();
+      Value *object = value_object_new(binding);
       for (int i = 0; node->children[i] != NULL; i++) {
         Node *entry = node->children[i];
         Node *identifier_node = entry->children[0];
@@ -588,7 +610,7 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_ARRAY: {
-      Value *array = value_array_new();
+      Value *array = value_array_new(binding);
 
       for (int i = 0; node->children[i] != NULL; i++) {
         Node *child = node->children[i];
@@ -606,18 +628,43 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
   return NULL;
+}
+// binding.this
+// binding.global
+// #object_create
+// ObjectPrototype = object_create(null)
+// Object = function(){}
+// Object.prototype = ObjectPrototype
+// Object.create = #object_create
 
+// Value* value_object_construct(Value *constructor) {
+//   Value *proto = value_object_get(constructor, value_string_new("prototype"));
+//   Value *new_object = value_object_create(proto);
+//   evaluate_function_call(constructor, NULL, 0, NULL);
+//   return new_object;
+// }
+
+Value* require_klass_object() {
+  Value *klass = value_function_new(NULL);
+  value_object_set(klass, value_string_new("prototype"), binding->object_prototype);
+  return klass;
+}
+
+Value* require_module_console() {
+  Value *f = value_function_native_new("__console_log__");
+
+  Value *console = value_object_create(NULL);
+  value_object_set(console, value_string_new("log"), f);
+  return console;
 }
 
 Env* env_global_new() {
   Env *global = env_new(NULL);
 
-  Value *f = value_function_new(NULL);
-  ((PrimitiveFunction*)f->primitive)->name = "__console_log__";
+  load_prelude();
 
-  Value *o = value_object_new();
-  value_object_set(o, value_string_new("log"), f);
-  env_set(global, "console", o);
+  env_set(global, "Object", require_klass_object());
+  env_set(global, "console", require_module_console());
 
   return global;
 }

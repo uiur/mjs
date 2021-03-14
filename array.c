@@ -1,14 +1,16 @@
 #include "value.h"
 #include "object.h"
 #include "array.h"
+#include "string.h"
 #include <stdlib.h>
 #include <string.h>
 
 #define NUMBER_UNWRAP(X) ((X)->primitive->value)
 #define ARRAY_UNWRAP(X) ((PrimitiveArray*)(X)->primitive)
 
-Value* value_array_new() {
-  Value *v = value_object_new();
+Value* value_array_new(Binding *binding) {
+  Value *v = value_object_new(binding);
+
   PrimitiveArray *a = malloc(sizeof(PrimitiveArray));
   a->type = PRIMITIVE_ARRAY;
   a->cap = 10;

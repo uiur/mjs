@@ -4,7 +4,7 @@
 #include <string.h>
 
 Value* value_string_new(const char *s) {
-  Value *v = value_object_new();
+  Value *v = value_object_create(NULL);
   PrimitiveString *primitive = malloc(sizeof(PrimitiveString));
   primitive->type = PRIMITIVE_STRING;
   primitive->value = 0;
