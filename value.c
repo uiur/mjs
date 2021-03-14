@@ -93,7 +93,6 @@ Value* value_false_new() {
   return v;
 }
 
-
 double value_number_unwrap(Value* v) {
   return v->primitive->value;
 }
@@ -104,6 +103,7 @@ Value* value_function_new(Node *node) {
   PrimitiveFunction *function_value = malloc(sizeof(PrimitiveFunction));
   function_value->type = PRIMITIVE_FUNCTION;
   function_value->node = node;
+  function_value->fn = NULL;
   if (node != NULL) {
     function_value->name = node->value;
   } else {
@@ -115,9 +115,9 @@ Value* value_function_new(Node *node) {
   return v;
 }
 
-Value* value_function_native_new(char *name) {
+Value* value_function_native_new(NativeFunction *fn) {
   Value *v = value_function_new(NULL);
-  ((PrimitiveFunction*)v->primitive)->name = name;
+  ((PrimitiveFunction*)v->primitive)->fn = fn;
   return v;
 }
 
@@ -339,7 +339,9 @@ Value* evaluate_node_children(Node *node, Env *env) {
 
 Value* evaluate_function_call(Value *v, Value **args, int size, Env *env) {
   PrimitiveFunction *value = (PrimitiveFunction*)(v->primitive);
-  if (strcmp(value->name, "__console_log__") == 0) return console_log(size, args);
+  if (value->fn != NULL) {
+    return (*(value->fn))(size, args);
+  }
 
   Node *node = value->node;
   ctx->returned = 0;
@@ -651,7 +653,7 @@ Value* require_klass_object() {
 }
 
 Value* require_module_console() {
-  Value *f = value_function_native_new("__console_log__");
+  Value *f = value_function_native_new(console_log);
 
   Value *console = value_object_create(NULL);
   value_object_set(console, value_string_new("log"), f);

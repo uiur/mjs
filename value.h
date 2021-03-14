@@ -40,10 +40,13 @@ typedef struct PrimitiveString {
   char *string;
 } PrimitiveString;
 
+
+typedef struct Value* (NativeFunction)(int, struct Value**);
 typedef struct PrimitiveFunction {
   PRIMITIVE_COMMON;
   char *name;
   struct Node *node;
+  NativeFunction *fn;
 } PrimitiveFunction;
 
 typedef enum ValueKind {
