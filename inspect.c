@@ -3,6 +3,7 @@
 #include "number.h"
 #include "array.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 char* value_inspect(Value *v) {

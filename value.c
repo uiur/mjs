@@ -6,6 +6,7 @@
 #include "boolean.h"
 #include "number.h"
 #include "array.h"
+#include "function.h"
 #include "string.h"
 #include "inspect.h"
 #include <stdio.h>
@@ -62,30 +63,6 @@ Value* require_object_prototype(Binding *binding) {
 
 void load_prelude() {
   require_object_prototype(binding);
-}
-
-Value* value_function_new(Node *node) {
-  Value *v = value_object_create(NULL);
-
-  PrimitiveFunction *function_value = malloc(sizeof(PrimitiveFunction));
-  function_value->type = PRIMITIVE_FUNCTION;
-  function_value->node = node;
-  function_value->fn = NULL;
-  if (node != NULL) {
-    function_value->name = node->value;
-  } else {
-    function_value->name = "";
-  }
-
-  v->primitive = (Primitive*)function_value;
-
-  return v;
-}
-
-Value* value_function_native_new(NativeFunction *fn) {
-  Value *v = value_function_new(NULL);
-  ((PrimitiveFunction*)v->primitive)->fn = fn;
-  return v;
 }
 
 int value_is_truthy(Value *v) {
