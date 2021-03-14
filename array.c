@@ -5,12 +5,15 @@
 #include "string.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define NUMBER_UNWRAP(X) ((X)->primitive->value)
 #define ARRAY_UNWRAP(X) ((PrimitiveArray*)(X)->primitive)
 
 Value* value_array_new(Binding *binding) {
-  Value *v = value_object_new(binding);
+  Value *klass = env_get(binding->global, "Array");
+  Value *proto = value_object_get(klass, value_string_new("prototype"));
+  Value *v = value_object_create(proto);
 
   PrimitiveArray *a = malloc(sizeof(PrimitiveArray));
   a->type = PRIMITIVE_ARRAY;

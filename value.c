@@ -20,11 +20,6 @@
   fprintf(stderr, " (%s:%d)\n", __FILE__, __LINE__); \
   abort();
 
-typedef struct Env {
-  struct HashTable *table;
-  struct Env *parent;
-} Env;
-
 Env* env_new(Env *parent) {
   Env *env = malloc(sizeof(Env));
   env->table = hash_table_new();
@@ -65,6 +60,35 @@ void load_prelude() {
   require_object_prototype(binding);
 }
 
+const char* value_typeof(Value *v) {
+  switch (v->kind) {
+    case VALUE_KIND_UNDEFINED: {
+      return "undefined";
+    }
+    default: {
+      break;
+    }
+  }
+
+  if (v->primitive != NULL) {
+    switch (v->primitive->type) {
+      case PRIMITIVE_FUNCTION: {
+        return "function";
+      }
+      case PRIMITIVE_NUMBER: {
+        return "number";
+      }
+      case PRIMITIVE_STRING: {
+        return "string";
+      }
+      default: {
+        break;
+      }
+    }
+  }
+
+  return "object";
+}
 int value_is_truthy(Value *v) {
   if (v->primitive == NULL) return 0;
 
@@ -90,7 +114,7 @@ void value_pp(Value *v) {
   printf("%s\n", s);
 }
 
-Value* console_log(int size, Value **args) {
+Value* native_console_log(Value *this, int size, Value **args) {
   for (int i = 0; i < size; i++) {
     Value *v = args[i];
     if (v == NULL) {
@@ -152,6 +176,8 @@ Value* value_less_than(int size, Value **args) {
 }
 
 Value* evaluate_node(Node *node, Env *env);
+Value* evaluate_node_children(Node *node, Env *env);
+Value* evaluate_node_from_source(char* source, Env *env);
 
 Value* evaluate_node_children(Node *node, Env *env) {
   Value *result = NULL;
@@ -170,8 +196,14 @@ Value* evaluate_node_children(Node *node, Env *env) {
 
 Value* evaluate_function_call(Value *f, Value *this, Value **args, int size, Env *env) {
   PrimitiveFunction *value = (PrimitiveFunction*)(f->primitive);
+  if (f->primitive != NULL && f->primitive->type != PRIMITIVE_FUNCTION) {
+    RUNTIME_ERROR("%s is not function", value_inspect(f));
+  }
+
+  if (this == NULL) this = value_undefined_new();
+
   if (value->fn != NULL) {
-    return (*(value->fn))(size, args);
+    return (*(value->fn))(this, size, args);
   }
 
   Node *node = value->node;
@@ -184,7 +216,6 @@ Value* evaluate_function_call(Value *f, Value *this, Value **args, int size, Env
     hash_table_set(function_env->table, arg->value, args[i]);
   }
 
-  if (this == NULL) this = value_undefined_new();
   env_set(function_env, "this", this);
   Value *result = evaluate_node_children(node, function_env);
   return result;
@@ -363,7 +394,10 @@ Value* evaluate_node(Node *node, Env *env) {
       Value *callee = evaluate_node(callee_node, env);
       if (callee == NULL) {
         RUNTIME_ERROR("function `%s` is not defined", callee_node->value);
-        abort();
+      }
+
+      if (strcmp(value_typeof(callee), "function") != 0) {
+        RUNTIME_ERROR("`%s` is not function, but %s", callee_node->value, value_typeof(callee));
       }
 
       Value *this = env_get(env, "this");
@@ -421,14 +455,35 @@ Value* evaluate_node(Node *node, Env *env) {
   return NULL;
 }
 
-Value* require_klass_object() {
+Value* evaluate_node_from_source(char* source, Env *env) {
+  Token *token = tokenize(source);
+  Node *node = parse(token);
+  return evaluate_node(node, env);
+}
+
+Value* require_klass_object(Binding *binding) {
   Value *klass = value_function_new(NULL);
   value_object_set(klass, value_string_new("prototype"), binding->object_prototype);
   return klass;
 }
 
+Value* native_value_array_length(Value *this, int size, Value **args) {
+  return value_number_new((double)((PrimitiveArray*)this->primitive)->size);
+}
+
+Value* require_klass_array(Binding *binding) {
+  Value *klass = value_object_create(NULL);
+
+  Value *array_prototype = value_object_create(NULL);
+  Value *f = value_function_native_new(native_value_array_length);
+  value_object_set(array_prototype, value_string_new("length"), f);
+
+  value_object_set(klass, value_string_new("prototype"), array_prototype);
+  return klass;
+}
+
 Value* require_module_console() {
-  Value *f = value_function_native_new(console_log);
+  Value *f = value_function_native_new(native_console_log);
 
   Value *console = value_object_create(NULL);
   value_object_set(console, value_string_new("log"), f);
@@ -437,14 +492,17 @@ Value* require_module_console() {
 
 Env* env_global_new() {
   Env *global = env_new(NULL);
+  binding->global = global;
 
   load_prelude();
 
-  env_set(global, "Object", require_klass_object());
+  env_set(global, "Object", require_klass_object(binding));
+  env_set(global, "Array", require_klass_array(binding));
   env_set(global, "console", require_module_console());
 
   return global;
 }
+
 
 Value* evaluate(Node *node) {
   Env *global = env_global_new();

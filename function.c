@@ -7,6 +7,7 @@ Value* value_function_new(Node *node) {
 
   PrimitiveFunction *function_value = malloc(sizeof(PrimitiveFunction));
   function_value->type = PRIMITIVE_FUNCTION;
+  function_value->value = 0;
   function_value->node = node;
   function_value->fn = NULL;
   if (node != NULL) {

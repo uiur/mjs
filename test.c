@@ -92,7 +92,9 @@ void test_example() {
   eval("if (1) { console.log(1); }");
   eval("if (1 < 2) { console.log(1 < 2); }");
   eval("for (var i = 0; i < 5; i = i + 1) {}");
+
   eval("var o = { a: 1, b: 2 }; function f() { return this.a + this.b; } o.f = f; console.log(o.f());");
+  eval("var a = [1, 2]; console.log(a.length());");
 }
 
 int main(int argc, char const **argv) {

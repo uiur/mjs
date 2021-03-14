@@ -10,6 +10,7 @@ Value* value_null_new() {
   v->kind = VALUE_KIND_NULL;
   v->table = NULL;
   v->proto = NULL;
+  v->primitive = NULL;
   return v;
 }
 
@@ -18,6 +19,7 @@ Value* value_undefined_new() {
   v->kind = VALUE_KIND_UNDEFINED;
   v->table = NULL;
   v->proto = NULL;
+  v->primitive = NULL;
   return v;
 }
 
@@ -25,6 +27,7 @@ Value* value_object_init() {
   Value *v = malloc(sizeof(Value));
   v->kind = VALUE_KIND_OBJECT;
   v->table = hash_table_new();
+  v->primitive = NULL;
   v->proto = NULL;
   return v;
 }
@@ -48,7 +51,7 @@ void value_object_set(Value *object, Value *key, Value *value) {
 }
 
 Value* value_object_get(Value *object, Value *key) {
-  if (object->primitive != NULL && object->primitive->type == PRIMITIVE_ARRAY) {
+  if (object->primitive != NULL && object->primitive->type == PRIMITIVE_ARRAY && key->primitive != NULL && key->primitive->type == PRIMITIVE_NUMBER) {
     Value *v = value_array_get(object, key);
     if (v != NULL) return v;
   }

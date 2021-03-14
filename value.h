@@ -41,7 +41,7 @@ typedef struct PrimitiveString {
 } PrimitiveString;
 
 
-typedef struct Value* (NativeFunction)(int, struct Value**);
+typedef struct Value* (NativeFunction)(struct Value*, int, struct Value**);
 typedef struct PrimitiveFunction {
   PRIMITIVE_COMMON;
   char *name;
@@ -65,8 +65,15 @@ typedef struct Value {
 Value* evaluate(Node *node);
 void assert_args_size(int size, int expected);
 
+typedef struct Env {
+  struct HashTable *table;
+  struct Env *parent;
+} Env;
+Value* env_get(Env *env, const char *key);
+
 typedef struct Binding {
   struct Value *object_prototype;
+  struct Env *global;
 } Binding;
 
 #endif

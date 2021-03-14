@@ -653,6 +653,7 @@ Node* transform(Node *node) {
         free(right);
 
         node->type = NODE_OBJECT_MEMBER_ACCESS;
+        node->value = right->value;
         node->children[1] = str;
 
         return node;
