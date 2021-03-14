@@ -4,8 +4,10 @@
 #include "value.h"
 #include "object.h"
 #include "boolean.h"
+#include "number.h"
 #include "array.h"
 #include "string.h"
+#include "inspect.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +54,6 @@ void env_set(Env *env, const char *key, Value *value) {
   hash_table_set(env->table, key, value);
 }
 
-
 Value* require_object_prototype(Binding *binding) {
   Value *proto = value_object_create(NULL);
   binding->object_prototype = proto;
@@ -61,10 +62,6 @@ Value* require_object_prototype(Binding *binding) {
 
 void load_prelude() {
   require_object_prototype(binding);
-}
-
-double value_number_unwrap(Value* v) {
-  return v->primitive->value;
 }
 
 Value* value_function_new(Node *node) {
@@ -108,71 +105,6 @@ int value_is_truthy(Value *v) {
   }
 }
 
-char* value_inspect(Value *v) {
-  char *buf = malloc(100 * sizeof(char));
-  if (v->primitive == NULL) {
-    switch (v->kind) {
-      case VALUE_KIND_NULL: {
-        return "null";
-      }
-
-      case VALUE_KIND_UNDEFINED: {
-        return "undefined";
-      }
-
-      default: {
-        return NULL;
-      }
-    }
-  } else {
-    switch (v->primitive->type) {
-      case PRIMITIVE_NUMBER: {
-        double n = value_number_unwrap(v);
-        sprintf(buf, "%.0f", n);
-        return buf;
-      }
-
-      case PRIMITIVE_BOOLEAN: {
-        double n = value_number_unwrap(v);
-        if (n == 1) {
-          return "true";
-        } else {
-          return "false";
-        }
-      }
-
-      case PRIMITIVE_STRING: {
-        PrimitiveString *vs = (PrimitiveString*)v->primitive;
-        return vs->string;
-      }
-
-      case PRIMITIVE_ARRAY: {
-        strcat(buf, "[");
-        for (int i = 0; i < value_number_unwrap(value_array_length(v)); i++) {
-          if (i > 0) {
-            strcat(buf, ", ");
-          }
-          const char *s = value_inspect(value_array_get(v, value_number_new(i)));
-          strcat(buf, s);
-        }
-
-        strcat(buf, "]");
-        return buf;
-      }
-
-      case PRIMITIVE_FUNCTION: {
-        return "function";
-      }
-
-      default: {
-        return NULL;
-      }
-    }
-  }
-
-  return NULL;
-}
-
 void value_pp(Value *v) {
   if (v == NULL) {
     RUNTIME_ERROR("unexpected NULL");
@@ -198,7 +130,6 @@ Value* console_log(int size, Value **args) {
   }
   return NULL;
 }
-
 
 void assert_args_size(int size, int expected) {
   if (size != expected) {
@@ -243,54 +174,7 @@ Value* value_less_than(int size, Value **args) {
   }
 }
 
-Value* value_number_subtract(int size, Value **args) {
-  assert_args_size(size, 2);
-
-  Value *left = args[0];
-  Value *right = args[1];
-
-  double sum = value_number_unwrap(left) - value_number_unwrap(right);
-  Value *number = value_number_new(sum);
-  return number;
-}
-
-Value* value_number_add(int size, Value **args) {
-  assert_args_size(size, 2);
-
-  Value *left = args[0];
-  Value *right = args[1];
-
-  double sum = value_number_unwrap(left) + value_number_unwrap(right);
-
-  Value *number = value_number_new(sum);
-  return number;
-}
-
-Value* value_number_multiply(int size, Value **args) {
-  assert_args_size(size, 2);
-
-  Value *left = args[0];
-  Value *right = args[1];
-
-  double result = value_number_unwrap(left) * value_number_unwrap(right);
-  Value *number = value_number_new(result);
-
-  return number;
-}
-
-Value* value_number_divide(int size, Value **args) {
-  assert_args_size(size, 2);
-
-  Value *left = args[0];
-  Value *right = args[1];
-
-  double result = value_number_unwrap(left) / value_number_unwrap(right);
-  Value *number = value_number_new(result);
-  return number;
-}
-
 Value* evaluate_node(Node *node, Env *env);
-
 
 Value* evaluate_node_children(Node *node, Env *env) {
   Value *result = NULL;
@@ -447,16 +331,6 @@ Value* evaluate_node(Node *node, Env *env) {
         Value *receiver = evaluate_node(node->children[0], env);
         Node *message_node = node->children[1];
         Value *message = value_string_new(message_node->value);
-
-        // array.length
-        // if (receiver->type == VALUE_ARRAY && strcmp(message_node->value, "length") == 0) {
-        //   return value_array_length((ValueArray *)receiver);
-        // }
-
-        // if (receiver->type != VALUE_OBJECT) {
-        //   fprintf(stderr, "runtime error: expected object, but got %s\n", value_inspect(receiver));
-        //   abort();
-        // }
 
         return value_object_get(receiver, message);
       }

@@ -63,7 +63,7 @@ typedef struct Value {
 } Value;
 
 Value* evaluate(Node *node);
-Value* value_number_new();
+void assert_args_size(int size, int expected);
 
 typedef struct Binding {
   struct Value *object_prototype;

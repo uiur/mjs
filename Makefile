@@ -1,5 +1,5 @@
 DIR = build
-OBJECTS = $(addprefix $(DIR)/,tokenize.o parse.o value.o hash.o object.o boolean.o number.o string.o array.o)
+OBJECTS = $(addprefix $(DIR)/,tokenize.o parse.o value.o hash.o object.o boolean.o number.o string.o array.o inspect.o)
 CFLAGS = -g
 MAIN = $(DIR)/main
 TEST = $(DIR)/test
