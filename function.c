@@ -8,6 +8,7 @@ Value* value_function_new(Node *node) {
   PrimitiveFunction *function_value = malloc(sizeof(PrimitiveFunction));
   function_value->type = PRIMITIVE_FUNCTION;
   function_value->value = 0;
+  function_value->is_property = 0;
   function_value->node = node;
   function_value->fn = NULL;
   if (node != NULL) {
@@ -23,6 +24,7 @@ Value* value_function_new(Node *node) {
 
 Value* value_function_native_new(NativeFunction *fn) {
   Value *v = value_function_new(NULL);
-  ((PrimitiveFunction*)v->primitive)->fn = fn;
+  PrimitiveFunction *f = (PrimitiveFunction*)v->primitive;
+  f->fn = fn;
   return v;
 }

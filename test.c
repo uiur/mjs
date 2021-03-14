@@ -85,6 +85,7 @@ void test_example() {
   eval("var a = [1]; a[0];");
   eval("var a = [[0, 1]]; a[0][1];");
   eval("var a = []; a[0] = 0;");
+  eval("var a = [1]; a.length;");
 
   eval("function add(a, b) { return a + b; } console.log(add(1, 2));");
   eval("function add(a, b) { return a + b; } var o; o = { plus: add }; console.log(o.plus(1, 2));");
@@ -94,7 +95,7 @@ void test_example() {
   eval("for (var i = 0; i < 5; i = i + 1) {}");
 
   eval("var o = { a: 1, b: 2 }; function f() { return this.a + this.b; } o.f = f; console.log(o.f());");
-  eval("var a = [1, 2]; console.log(a.length());");
+  eval("var a = [1, 2]; console.log(a.length);");
 }
 
 int main(int argc, char const **argv) {

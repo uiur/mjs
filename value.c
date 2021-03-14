@@ -20,6 +20,8 @@
   fprintf(stderr, " (%s:%d)\n", __FILE__, __LINE__); \
   abort();
 
+#define FUNCTION_UNWRAP(X) (((X)->primitive != NULL && (X)->primitive->type == PRIMITIVE_FUNCTION) ? (PrimitiveFunction*)((X)->primitive) : NULL)
+
 Env* env_new(Env *parent) {
   Env *env = malloc(sizeof(Env));
   env->table = hash_table_new();
@@ -195,8 +197,8 @@ Value* evaluate_node_children(Node *node, Env *env) {
 }
 
 Value* evaluate_function_call(Value *f, Value *this, Value **args, int size, Env *env) {
-  PrimitiveFunction *value = (PrimitiveFunction*)(f->primitive);
-  if (f->primitive != NULL && f->primitive->type != PRIMITIVE_FUNCTION) {
+  PrimitiveFunction *value = FUNCTION_UNWRAP(f);
+  if (value == NULL) {
     RUNTIME_ERROR("%s is not function", value_inspect(f));
   }
 
@@ -424,14 +426,23 @@ Value* evaluate_node(Node *node, Env *env) {
 
     case NODE_OBJECT_MEMBER_ACCESS: {
       Value *v = evaluate_node(node->children[0], env);
-      Value *member = evaluate_node(node->children[1], env);
+      Value *name = evaluate_node(node->children[1], env);
       if (v->kind != VALUE_KIND_OBJECT) {
         fprintf(stderr, "runtime error: unexpected member access: %s\n", value_inspect(v));
         abort();
       }
 
+
       env_set(env, "this", v);
-      return value_object_get(v, member);
+      Value *member_value = value_object_get(v, name);
+
+      if (strcmp(value_typeof(member_value), "function") == 0) {
+        if (FUNCTION_UNWRAP(member_value)->is_property) {
+          return evaluate_function_call(member_value, v, NULL, 0, env);
+        }
+      }
+
+      return member_value;
     }
 
     case NODE_ARRAY: {
@@ -476,6 +487,7 @@ Value* require_klass_array(Binding *binding) {
 
   Value *array_prototype = value_object_create(NULL);
   Value *f = value_function_native_new(native_value_array_length);
+  FUNCTION_UNWRAP(f)->is_property = 1;
   value_object_set(array_prototype, value_string_new("length"), f);
 
   value_object_set(klass, value_string_new("prototype"), array_prototype);

@@ -47,6 +47,7 @@ typedef struct PrimitiveFunction {
   char *name;
   struct Node *node;
   NativeFunction *fn;
+  int is_property;
 } PrimitiveFunction;
 
 typedef enum ValueKind {
