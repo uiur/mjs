@@ -28,7 +28,6 @@ Env* env_new(Env *parent) {
   return env;
 }
 
-
 Value* env_get(Env *env, const char *key)  {
   if (env == NULL) return NULL;
 
@@ -42,67 +41,71 @@ void env_set(Env *env, const char *key, Value *value) {
   hash_table_set(env->table, key, value);
 }
 
-
-Value* value_new(ValueType type) {
-  Value *v = malloc(sizeof(Value));
-  v->type = type;
-  v->value = 0;
-  return v;
-}
-
 Value* value_true_new() {
-  Value *v = value_new(VALUE_BOOLEAN);
-  v->value = 1;
+  Value *v = value_object_new();
+
+  Primitive *primitive = malloc(sizeof(Primitive));
+  primitive->type = PRIMITIVE_BOOLEAN;
+  primitive->value = 1;
+  v->primitive = primitive;
+
   return v;
 }
 
 Value* value_false_new() {
-  Value *v = value_new(VALUE_BOOLEAN);
-  v->value = 0;
+  Value *v = value_object_new();
+
+  Primitive *primitive = malloc(sizeof(Primitive));
+  primitive->type = PRIMITIVE_BOOLEAN;
+  primitive->value = 0;
+  v->primitive = primitive;
+
   return v;
 }
 
-Value* value_undefined_new() {
-  return value_new(VALUE_UNDEFINED);
-}
-
 Value* value_number_new(double n) {
-  Value *number = malloc(sizeof(Value));
-  number->type = VALUE_NUMBER;
-  number->value = n;
+  Value *v = value_object_new();
+  Primitive *primitive = malloc(sizeof(Primitive));
+  primitive->type = PRIMITIVE_NUMBER;
+  primitive->value = n;
+  v->primitive = primitive;
 
-  return number;
+  return v;
 }
 
 double value_number_unwrap(Value* v) {
-  return v->value;
+  return v->primitive->value;
 }
 
 Value* value_function_new(Node *node) {
-  ValueFunction *function_value = malloc(sizeof(ValueFunction));
-  function_value->type = VALUE_FUNCTION;
+  Value *v = value_object_new();
+
+  PrimitiveFunction *function_value = malloc(sizeof(PrimitiveFunction));
+  function_value->type = PRIMITIVE_FUNCTION;
   function_value->node = node;
   if (node != NULL) {
     function_value->name = node->value;
   } else {
     function_value->name = "";
   }
-  return (Value*)function_value;
+
+  v->primitive = (Primitive*)function_value;
+
+  return v;
 }
 
 int value_is_truthy(Value *v) {
-  switch (v->type) {
-    case VALUE_NUMBER: {
-      double n = v->value;
+  if (v->primitive == NULL) return 0;
+
+  switch (v->primitive->type) {
+    case PRIMITIVE_BOOLEAN:
+    case PRIMITIVE_NUMBER: {
+      double n = value_number_unwrap(v);
       return n != 0;
     }
 
-    case VALUE_BOOLEAN: {
-      return v->value == 1;
-    }
-
     default: {
-      fprintf(stderr, "unexpected value type %d for value_is_truthy\n", v->type);
+      fprintf(stderr, "unexpected value type %d for value_is_truthy\n", v->kind);
       abort();
     }
   }
@@ -110,55 +113,63 @@ int value_is_truthy(Value *v) {
 
 char* value_inspect(Value *v) {
   char *buf = malloc(100 * sizeof(char));
-  switch (v->type) {
-    case VALUE_NUMBER: {
-      double n = v->value;
-      sprintf(buf, "%.0f", n);
-      return buf;
-    }
+  if (v->primitive == NULL) {
+    switch (v->kind) {
+      case VALUE_KIND_NULL: {
+        return "null";
+      }
 
-    case VALUE_STRING: {
-      ValueString *vs = (ValueString*)v;
-      return vs->string;
-    }
+      case VALUE_KIND_UNDEFINED: {
+        return "undefined";
+      }
 
-    case VALUE_BOOLEAN: {
-      if (v->value == 1) {
-        return "true";
-      } else {
-        return "false";
+      default: {
+        return NULL;
       }
     }
+  } else {
+    switch (v->primitive->type) {
+      case PRIMITIVE_NUMBER: {
+        double n = value_number_unwrap(v);
+        sprintf(buf, "%.0f", n);
+        return buf;
+      }
 
-    case VALUE_ARRAY: {
-      ValueArray *array = (ValueArray*)v;
-      strcat(buf, "[");
-      for (int i = 0; i < value_number_unwrap(value_array_length(array)); i++) {
-        if (i > 0) {
-          strcat(buf, ", ");
+      case PRIMITIVE_BOOLEAN: {
+        double n = value_number_unwrap(v);
+        if (n == 1) {
+          return "true";
+        } else {
+          return "false";
         }
-        const char *s = value_inspect(value_array_get(array, value_number_new(i)));
-        strcat(buf, s);
       }
 
-      strcat(buf, "]");
-      return buf;
-    }
+      case PRIMITIVE_STRING: {
+        PrimitiveString *vs = (PrimitiveString*)v->primitive;
+        return vs->string;
+      }
 
-    case VALUE_NULL: {
-      return "null";
-    }
+      case PRIMITIVE_ARRAY: {
+        strcat(buf, "[");
+        for (int i = 0; i < value_number_unwrap(value_array_length(v)); i++) {
+          if (i > 0) {
+            strcat(buf, ", ");
+          }
+          const char *s = value_inspect(value_array_get(v, value_number_new(i)));
+          strcat(buf, s);
+        }
 
-    case VALUE_UNDEFINED: {
-      return "undefined";
-    }
+        strcat(buf, "]");
+        return buf;
+      }
 
-    case VALUE_FUNCTION: {
-      return "function";
-    }
+      case PRIMITIVE_FUNCTION: {
+        return "function";
+      }
 
-    default: {
-      return NULL;
+      default: {
+        return NULL;
+      }
     }
   }
 
@@ -183,7 +194,7 @@ Value* console_log(int size, Value **args) {
 
     const char *str = value_inspect(v);
     if (str == NULL) {
-      fprintf(stderr, "log error: type %s cannot be inspect\n", ValueTypeString[v->type]);
+      fprintf(stderr, "log error: type %s cannot be inspect\n", PrimitiveTypeString[v->kind]);
       abort();
     }
     printf("%s\n", str);
@@ -203,7 +214,7 @@ Value* value_equal(int size, Value **args) {
   Value *left = args[0];
   Value *right = args[1];
 
-  if (left->type == right->type && left->value == right->value) {
+  if (value_number_unwrap(left) == value_number_unwrap(right)) {
     return value_true_new();
   } else  {
     return value_false_new();
@@ -215,7 +226,7 @@ Value* value_greater_than(int size, Value **args) {
   Value *left = args[0];
   Value *right = args[1];
 
-  if (left->type == right->type && left->value > right->value) {
+  if (value_number_unwrap(left) > value_number_unwrap(right)) {
     return value_true_new();
   } else  {
     return value_false_new();
@@ -227,7 +238,7 @@ Value* value_less_than(int size, Value **args) {
   Value *left = args[0];
   Value *right = args[1];
 
-  if (left->type == right->type && left->value < right->value) {
+  if (value_number_unwrap(left) < value_number_unwrap(right)) {
     return value_true_new();
   } else  {
     return value_false_new();
@@ -240,7 +251,7 @@ Value* value_number_subtract(int size, Value **args) {
   Value *left = args[0];
   Value *right = args[1];
 
-  double sum = left->value - right->value;
+  double sum = value_number_unwrap(left) - value_number_unwrap(right);
   Value *number = value_number_new(sum);
   return number;
 }
@@ -251,7 +262,7 @@ Value* value_number_add(int size, Value **args) {
   Value *left = args[0];
   Value *right = args[1];
 
-  double sum = left->value + right->value;
+  double sum = value_number_unwrap(left) + value_number_unwrap(right);
 
   Value *number = value_number_new(sum);
   return number;
@@ -263,7 +274,7 @@ Value* value_number_multiply(int size, Value **args) {
   Value *left = args[0];
   Value *right = args[1];
 
-  double result = left->value * right->value;
+  double result = value_number_unwrap(left) * value_number_unwrap(right);
   Value *number = value_number_new(result);
 
   return number;
@@ -275,7 +286,7 @@ Value* value_number_divide(int size, Value **args) {
   Value *left = args[0];
   Value *right = args[1];
 
-  double result = left->value / right->value;
+  double result = value_number_unwrap(left) / value_number_unwrap(right);
   Value *number = value_number_new(result);
   return number;
 }
@@ -304,7 +315,8 @@ Value* evaluate_node_children(Node *node, Env *env) {
   return result;
 }
 
-Value* evaluate_function_call(ValueFunction *value, Value **args, int size, Env *env) {
+Value* evaluate_function_call(Value *v, Value **args, int size, Env *env) {
+  PrimitiveFunction *value = (PrimitiveFunction*)(v->primitive);
   if (strcmp(value->name, "__console_log__") == 0) return console_log(size, args);
 
   Node *node = value->node;
@@ -334,10 +346,8 @@ Value* evaluate_node(Node *node, Env *env) {
 
     case NODE_PRIMITIVE_NUMBER: {
       char *str = node->value;
-      Value *number = malloc(sizeof(Value));
-      number->type = VALUE_NUMBER;
-      number->value = (double)atoi(str);
-      return number;
+      Value *v = value_number_new((double)atoi(str));
+      return v;
     }
 
     case NODE_IDENTIFIER: {
@@ -366,27 +376,17 @@ Value* evaluate_node(Node *node, Env *env) {
           break;
         }
 
+        case NODE_BINARY_OPERATOR: {
+          Value *v = evaluate_node(left->children[0], env);
+          Value *property = value_string_new(left->children[1]->value);
+          value_object_set(v, property, right_value);
+          break;
+        }
+
         case NODE_OBJECT_MEMBER_ACCESS: {
           Value *v = evaluate_node(left->children[0], env);
           Value *property = evaluate_node(left->children[1], env);
-
-          switch (v->type) {
-            case VALUE_OBJECT: {
-              value_object_set((ValueObject*)v, (ValueString*)property, right_value);
-              break;
-            }
-
-            case VALUE_ARRAY: {
-              value_array_set((ValueArray*)v, property, right_value);
-              break;
-            }
-
-            default: {
-              fprintf(stderr, "runtime error: unexpected member access: %s\n", ValueTypeString[v->type]);
-              abort();
-            }
-          }
-
+          value_object_set(v, property, right_value);
           break;
         }
 
@@ -455,16 +455,16 @@ Value* evaluate_node(Node *node, Env *env) {
         Value *message = value_string_new(message_node->value);
 
         // array.length
-        if (receiver->type == VALUE_ARRAY && strcmp(message_node->value, "length") == 0) {
-          return value_array_length((ValueArray *)receiver);
-        }
+        // if (receiver->type == VALUE_ARRAY && strcmp(message_node->value, "length") == 0) {
+        //   return value_array_length((ValueArray *)receiver);
+        // }
 
-        if (receiver->type != VALUE_OBJECT) {
-          fprintf(stderr, "runtime error: expected object, but got %s\n", value_inspect(receiver));
-          abort();
-        }
+        // if (receiver->type != VALUE_OBJECT) {
+        //   fprintf(stderr, "runtime error: expected object, but got %s\n", value_inspect(receiver));
+        //   abort();
+        // }
 
-        return value_object_get((ValueObject*)receiver, (ValueString*)message);
+        return value_object_get(receiver, message);
       }
 
       Value **args = malloc(size * sizeof(Value));
@@ -518,12 +518,11 @@ Value* evaluate_node(Node *node, Env *env) {
 
       Value *value = evaluate_node(reference, env);
       if (value != NULL) {
-        if (value->type != VALUE_FUNCTION) {
-          RUNTIME_ERROR("`%s` is not function", value_inspect(value));
-        }
+        // if (value->type != VALUE_FUNCTION) {
+        //   RUNTIME_ERROR("`%s` is not function", value_inspect(value));
+        // }
 
-        ValueFunction *function = (ValueFunction*)value;
-        Value *return_value = evaluate_function_call(function, args, size, env);
+        Value *return_value = evaluate_function_call(value, args, size, env);
         return return_value;
       }
 
@@ -533,11 +532,11 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_PRIMITIVE_UNDEFINED: {
-      return value_new(VALUE_UNDEFINED);
+      return value_undefined_new();
     }
 
     case NODE_PRIMITIVE_NULL: {
-      return value_new(VALUE_NULL);
+      return value_null_new();
     }
 
     case NODE_PRIMITIVE_BOOLEAN: {
@@ -565,7 +564,7 @@ Value* evaluate_node(Node *node, Env *env) {
         Value *vs = value_string_new(identifier_node->value);
         Value *v = evaluate_node(value_node, env);
 
-        value_object_set((ValueObject*)object, (ValueString*)vs, v);
+        value_object_set(object, vs, v);
       }
 
       return object;
@@ -575,17 +574,13 @@ Value* evaluate_node(Node *node, Env *env) {
       Value *v = evaluate_node(node->children[0], env);
       Value *member = evaluate_node(node->children[1], env);
 
-      switch (v->type) {
-        case VALUE_OBJECT: {
-          return value_object_get((ValueObject*)v, (ValueString*)member);
-        }
-
-        case VALUE_ARRAY: {
-          return value_array_get((ValueArray*)v, member);
+      switch (v->kind) {
+        case VALUE_KIND_OBJECT: {
+          return value_object_get(v, member);
         }
 
         default: {
-          fprintf(stderr, "runtime error: unexpected member access: %s\n", ValueTypeString[v->type]);
+          fprintf(stderr, "runtime error: unexpected member access: %s\n", value_inspect(v));
           abort();
         }
       }
@@ -593,7 +588,7 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_ARRAY: {
-      ValueArray *array = (ValueArray*)value_array_new();
+      Value *array = value_array_new();
 
       for (int i = 0; node->children[i] != NULL; i++) {
         Node *child = node->children[i];
@@ -617,11 +612,11 @@ Value* evaluate_node(Node *node, Env *env) {
 Env* env_global_new() {
   Env *global = env_new(NULL);
 
-  ValueFunction *f = (ValueFunction*)value_function_new(NULL);
-  f->name = "__console_log__";
+  Value *f = value_function_new(NULL);
+  ((PrimitiveFunction*)f->primitive)->name = "__console_log__";
 
   Value *o = value_object_new();
-  value_object_set((ValueObject*)o, (ValueString*)value_string_new("log"), (Value*)f);
+  value_object_set(o, value_string_new("log"), f);
   env_set(global, "console", o);
 
   return global;

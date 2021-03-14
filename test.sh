@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 executable=./build/main
 
 GREEN='\033[0;32m'

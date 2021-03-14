@@ -2,60 +2,64 @@
 #define MJS_VALUE_H
 
 #include "parse.h"
-#define VALUE_ENUM(M) \
-  M(VALUE_NUMBER) \
-  M(VALUE_STRING) \
-  M(VALUE_OBJECT) \
-  M(VALUE_ARRAY) \
-  M(VALUE_FUNCTION) \
-  M(VALUE_BOOLEAN) \
-  M(VALUE_NULL) \
-  M(VALUE_UNDEFINED)
+#define PRIMITIVE_ENUM(M) \
+  M(PRIMITIVE_NUMBER) \
+  M(PRIMITIVE_STRING) \
+  M(PRIMITIVE_ARRAY) \
+  M(PRIMITIVE_FUNCTION) \
+  M(PRIMITIVE_BOOLEAN)
 
-#define VALUE_ENUM_TO_ENUM(X) X,
-#define VALUE_ENUM_TO_STRING(X) #X,
+#define PRIMITIVE_ENUM_TO_ENUM(X) X,
+#define PRIMITIVE_ENUM_TO_STRING(X) #X,
 
-typedef enum ValueType {
-  VALUE_ENUM(VALUE_ENUM_TO_ENUM)
-} ValueType;
+typedef enum PrimitiveType {
+  PRIMITIVE_ENUM(PRIMITIVE_ENUM_TO_ENUM)
+} PrimitiveType;
 
-static const char *ValueTypeString[] = {
-  NODE_ENUM(VALUE_ENUM_TO_STRING)
+static const char *PrimitiveTypeString[] = {
+  NODE_ENUM(PRIMITIVE_ENUM_TO_STRING)
 };
 
-#define VALUE_COMMON \
-  ValueType type; \
+#define PRIMITIVE_COMMON \
+  PrimitiveType type; \
   double value
 
-typedef struct Value {
-  VALUE_COMMON;
-} Value;
+typedef struct Primitive {
+  PRIMITIVE_COMMON;
+} Primitive;
 
-typedef struct ValueObject {
-  VALUE_COMMON;
-  struct HashTable *table;
-} ValueObject;
-
-typedef struct ValueArray {
-  VALUE_COMMON;
+typedef struct PrimitiveArray {
+  PRIMITIVE_COMMON;
   unsigned int cap;
   unsigned int size;
   struct Value** values;
-} ValueArray;
+} PrimitiveArray;
 
-typedef struct ValueString {
-  VALUE_COMMON;
+typedef struct PrimitiveString {
+  PRIMITIVE_COMMON;
   char *string;
-} ValueString;
+} PrimitiveString;
 
-typedef struct ValueFunction {
-  VALUE_COMMON;
+typedef struct PrimitiveFunction {
+  PRIMITIVE_COMMON;
   char *name;
   struct Node *node;
-} ValueFunction;
+} PrimitiveFunction;
+
+typedef enum ValueKind {
+  VALUE_KIND_NULL,
+  VALUE_KIND_UNDEFINED,
+  VALUE_KIND_OBJECT
+} ValueKind;
+
+typedef struct Value {
+  ValueKind kind;
+  struct Primitive *primitive;
+  struct HashTable *table;
+  struct Value *proto;
+} Value;
 
 Value* evaluate(Node *node);
-Value* value_undefined_new();
 Value* value_number_new();
 
 #endif

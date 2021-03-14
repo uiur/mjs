@@ -86,9 +86,9 @@ void test_example() {
   eval("var a = [[0, 1]]; a[0][1];");
   eval("var a = []; a[0] = 0;");
 
-
   eval("function add(a, b) { return a + b; } console.log(add(1, 2));");
   eval("function add(a, b) { return a + b; } var o; o = { plus: add }; console.log(o.plus(1, 2));");
+  // eval("var f = function (n) { return n }; f(42);");
   eval("if (1) { console.log(1); }");
   eval("if (1 < 2) { console.log(1 < 2); }");
 }

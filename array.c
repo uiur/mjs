@@ -1,40 +1,49 @@
 #include "value.h"
+#include "object.h"
 #include "array.h"
 #include <stdlib.h>
 #include <string.h>
 
-Value* value_array_new() {
-  ValueArray *v = malloc(sizeof(ValueArray));
-  v->type = VALUE_ARRAY;
-  v->cap = 10;
-  v->size = 0;
+#define NUMBER_UNWRAP(X) ((X)->primitive->value)
+#define ARRAY_UNWRAP(X) ((PrimitiveArray*)(X)->primitive)
 
-  v->values = malloc(v->cap * sizeof(Value*));
-  memset(v->values, (int)NULL, v->cap * sizeof(Value*));
-  return (Value*)v;
+Value* value_array_new() {
+  Value *v = value_object_new();
+  PrimitiveArray *a = malloc(sizeof(PrimitiveArray));
+  a->type = PRIMITIVE_ARRAY;
+  a->cap = 10;
+  a->size = 0;
+
+  a->values = malloc(a->cap * sizeof(Value*));
+  memset(a->values, (int)NULL, a->cap * sizeof(Value*));
+  v->primitive = (Primitive*)a;
+
+  return v;
 }
 
-Value* value_array_get(ValueArray *array, Value *index) {
-  int i = (int)index->value;
+Value* value_array_get(Value *v, Value *index) {
+  PrimitiveArray *array = ARRAY_UNWRAP(v);
+  int i = (int)NUMBER_UNWRAP(index);
   return array->values[i];
 }
 
-void value_array_resize(ValueArray *array, unsigned int new_cap) {
+void value_array_resize(PrimitiveArray *array, unsigned int new_cap) {
   array->cap = new_cap;
-  array->values = realloc(array->values, array->cap * sizeof(Value*));
+  array->values = realloc(array->values, array->cap * sizeof(Primitive*));
   for (unsigned int i = array->size; i < array->cap; i++) {
     array->values[i] = NULL;
   }
 }
 
-void value_array_resize_if_needed(ValueArray *array) {
+void value_array_resize_if_needed(PrimitiveArray *array) {
   if (array->cap <= array->size * 2) {
     value_array_resize(array, array->cap * 2);
   }
 }
 
-void value_array_set(ValueArray *array, Value *index, Value *value) {
-  int i = (int)index->value;
+void value_array_set(Value *v, Value *index, Value *value) {
+  PrimitiveArray *array = ARRAY_UNWRAP(v);
+  int i = NUMBER_UNWRAP(index);
   array->values[i] = value;
 
   if (i + 1 >= array->size) {
@@ -43,6 +52,6 @@ void value_array_set(ValueArray *array, Value *index, Value *value) {
   }
 }
 
-Value* value_array_length(ValueArray *array) {
-  return value_number_new((double)array->size);
+Value* value_array_length(Value *v) {
+  return value_number_new((double)ARRAY_UNWRAP(v)->size);
 }
