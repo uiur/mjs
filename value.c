@@ -3,6 +3,7 @@
 #include "hash.h"
 #include "value.h"
 #include "object.h"
+#include "boolean.h"
 #include "array.h"
 #include "string.h"
 #include <stdio.h>
@@ -51,15 +52,6 @@ void env_set(Env *env, const char *key, Value *value) {
   hash_table_set(env->table, key, value);
 }
 
-Value* value_number_new(double n) {
-  Value *v = value_object_create(NULL);
-  Primitive *primitive = malloc(sizeof(Primitive));
-  primitive->type = PRIMITIVE_NUMBER;
-  primitive->value = n;
-  v->primitive = primitive;
-
-  return v;
-}
 
 Value* require_object_prototype(Binding *binding) {
   Value *proto = value_object_create(NULL);
@@ -69,28 +61,6 @@ Value* require_object_prototype(Binding *binding) {
 
 void load_prelude() {
   require_object_prototype(binding);
-}
-
-Value* value_true_new() {
-  Value *v = value_object_create(NULL);
-
-  Primitive *primitive = malloc(sizeof(Primitive));
-  primitive->type = PRIMITIVE_BOOLEAN;
-  primitive->value = 1;
-  v->primitive = primitive;
-
-  return v;
-}
-
-Value* value_false_new() {
-  Value *v = value_object_create(NULL);
-
-  Primitive *primitive = malloc(sizeof(Primitive));
-  primitive->type = PRIMITIVE_BOOLEAN;
-  primitive->value = 0;
-  v->primitive = primitive;
-
-  return v;
 }
 
 double value_number_unwrap(Value* v) {
