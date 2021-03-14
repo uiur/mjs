@@ -168,8 +168,8 @@ Value* evaluate_node_children(Node *node, Env *env) {
   return result;
 }
 
-Value* evaluate_function_call(Value *v, Value **args, int size, Env *env) {
-  PrimitiveFunction *value = (PrimitiveFunction*)(v->primitive);
+Value* evaluate_function_call(Value *f, Value *this, Value **args, int size, Env *env) {
+  PrimitiveFunction *value = (PrimitiveFunction*)(f->primitive);
   if (value->fn != NULL) {
     return (*(value->fn))(size, args);
   }
@@ -184,6 +184,8 @@ Value* evaluate_function_call(Value *v, Value **args, int size, Env *env) {
     hash_table_set(function_env->table, arg->value, args[i]);
   }
 
+  if (this == NULL) this = value_undefined_new();
+  env_set(function_env, "this", this);
   Value *result = evaluate_node_children(node, function_env);
   return result;
 }
@@ -346,7 +348,6 @@ Value* evaluate_node(Node *node, Env *env) {
     }
 
     case NODE_FUNCTION_CALL: {
-      Node *reference = node->children[0];
       Node **children = (node->children) + 1;
 
       int size = 0;
@@ -357,19 +358,17 @@ Value* evaluate_node(Node *node, Env *env) {
         args[i] = evaluate_node(children[i], env);
       }
 
-      Value *value = evaluate_node(reference, env);
-      if (value != NULL) {
-        // if (value->type != VALUE_FUNCTION) {
-        //   RUNTIME_ERROR("`%s` is not function", value_inspect(value));
-        // }
-
-        Value *return_value = evaluate_function_call(value, args, size, env);
-        return return_value;
+      Node *callee_node = node->children[0];
+      env_set(env, "this", NULL);
+      Value *callee = evaluate_node(callee_node, env);
+      if (callee == NULL) {
+        RUNTIME_ERROR("function `%s` is not defined", callee_node->value);
+        abort();
       }
 
-      RUNTIME_ERROR("function `%s` is not defined", reference->value);
-
-      break;
+      Value *this = env_get(env, "this");
+      Value *return_value = evaluate_function_call(callee, this, args, size, env);
+      return return_value;
     }
 
 
@@ -397,6 +396,7 @@ Value* evaluate_node(Node *node, Env *env) {
         abort();
       }
 
+      env_set(env, "this", v);
       return value_object_get(v, member);
     }
 
