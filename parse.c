@@ -600,18 +600,50 @@ Node* parse_statement_list(ParseState *state) {
 
 Node* parse_program(ParseState *state) {
   Node *node = parse_statement_list(state);
-  node->type = NODE_PROGRAM;
-
   return node;
 }
 
+// makes the number of node patterns less in order to help implementation of evaluator
+//
+// obj.foo => obj['foo']
 Node* transform(Node *node) {
   for (int i = 0; node->children[i] != NULL; i++) {
     Node *child = node->children[i];
     node->children[i] = transform(child);
   }
 
+  for (int i = 0; node->args[i] != NULL; i++) {
+    Node *arg = node->args[i];
+    node->args[i] = transform(arg);
+  }
+
   switch (node->type) {
+    case NODE_STATEMENT_FOR: {
+      Node *init = node->args[0];
+      Node *condition = node->args[1];
+      Node *next = node->args[2];
+
+      Node *while_node = node_alloc(NODE_STATEMENT_WHILE, 0);
+
+      int arg_size = 1;
+      while_node->args = malloc((arg_size + 1) * sizeof(Node*));
+      while_node->args[arg_size] = NULL;
+      while_node->args[0] = condition;
+
+      while_node->children = node->children;
+      if (next != NULL) {
+        node_children_push(while_node, next);
+      }
+
+      Node *statement_list = node_alloc(NODE_STATEMENT_LIST, 0);
+      if (init != NULL) {
+        node_children_push(statement_list, init);
+      }
+      node_children_push(statement_list, while_node);
+
+      return statement_list;
+    }
+
     case NODE_BINARY_OPERATOR: {
       if (strcmp(node->value, ".") == 0) {
         Node *right = node->children[1];
@@ -625,6 +657,8 @@ Node* transform(Node *node) {
 
         return node;
       }
+
+      return node;
     }
 
     default: {

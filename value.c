@@ -190,19 +190,43 @@ Value* evaluate_function_call(Value *v, Value **args, int size, Env *env) {
 
 Value* evaluate_node(Node *node, Env *env) {
   switch (node->type) {
-    case NODE_PROGRAM: {
+    // primitive nodes
+    case NODE_PRIMITIVE_NUMBER: {
+      char *str = node->value;
+      Value *v = value_number_new((double)atoi(str));
+      return v;
+    }
+
+    case NODE_PRIMITIVE_UNDEFINED: {
+      return value_undefined_new();
+    }
+
+    case NODE_PRIMITIVE_NULL: {
+      return value_null_new();
+    }
+
+    case NODE_PRIMITIVE_BOOLEAN: {
+      if (strcmp(node->value, "true") == 0) {
+        return value_true_new();
+      } else if (strcmp(node->value, "false") == 0) {
+        return value_false_new();
+      } else {
+        fprintf(stderr, "runtime error: unexpected value for boolean: %s\n", node->value);
+        abort();
+      }
+    }
+
+    case NODE_PRIMITIVE_STRING: {
+      return value_string_new(node->value);
+    }
+
+    case NODE_STATEMENT_LIST: {
       for (int i = 0; node->children[i] != NULL; i++) {
         Node *child = node->children[i];
         evaluate_node(child, env);
       }
 
       break;
-    }
-
-    case NODE_PRIMITIVE_NUMBER: {
-      char *str = node->value;
-      Value *v = value_number_new((double)atoi(str));
-      return v;
     }
 
     case NODE_IDENTIFIER: {
@@ -272,20 +296,6 @@ Value* evaluate_node(Node *node, Env *env) {
     case NODE_STATEMENT_WHILE: {
       while (value_is_truthy(evaluate_node(node->args[0], env))) {
         evaluate_node_children(node, env);
-      }
-
-      return NULL;
-    }
-
-    case NODE_STATEMENT_FOR: {
-      Node *init = node->args[0];
-      Node *condition = node->args[1];
-      Node *next = node->args[2];
-
-      if (init != NULL) evaluate_node(init, env);
-      while (value_is_truthy(evaluate_node(condition, env))) {
-        evaluate_node_children(node, env);
-        if (next != NULL) evaluate_node(next, env);
       }
 
       return NULL;
@@ -362,28 +372,6 @@ Value* evaluate_node(Node *node, Env *env) {
       break;
     }
 
-    case NODE_PRIMITIVE_UNDEFINED: {
-      return value_undefined_new();
-    }
-
-    case NODE_PRIMITIVE_NULL: {
-      return value_null_new();
-    }
-
-    case NODE_PRIMITIVE_BOOLEAN: {
-      if (strcmp(node->value, "true") == 0) {
-        return value_true_new();
-      } else if (strcmp(node->value, "false") == 0) {
-        return value_false_new();
-      } else {
-        fprintf(stderr, "runtime error: unexpected value for boolean: %s\n", node->value);
-        abort();
-      }
-    }
-
-    case NODE_PRIMITIVE_STRING: {
-      return value_string_new(node->value);
-    }
 
     case NODE_OBJECT: {
       Value *object = value_object_new(binding);
