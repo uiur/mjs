@@ -312,7 +312,6 @@ Node* parse_member_access(ParseState *state, Node *callee) {
   return NULL;
 }
 
-
 Node* parse_term_member_access(ParseState *state) {
   Node *node = parse_term_function_call(state);
 
@@ -606,11 +605,39 @@ Node* parse_program(ParseState *state) {
   return node;
 }
 
+Node* transform(Node *node) {
+  for (int i = 0; node->children[i] != NULL; i++) {
+    Node *child = node->children[i];
+    node->children[i] = transform(child);
+  }
+
+  switch (node->type) {
+    case NODE_BINARY_OPERATOR: {
+      if (strcmp(node->value, ".") == 0) {
+        Node *right = node->children[1];
+
+        Node *str = node_alloc(NODE_PRIMITIVE_STRING, 0);
+        str->value = right->value;
+        free(right);
+
+        node->type = NODE_OBJECT_MEMBER_ACCESS;
+        node->children[1] = str;
+
+        return node;
+      }
+    }
+
+    default: {
+      return node;
+    }
+  }
+}
+
 Node* parse(Token *token) {
   ParseState state;
   state.token = token;
 
-  Node *node = parse_program(&state);
+  Node *node = transform(parse_program(&state));
   if (state.token != NULL) {
     fprintf(stderr, "parse error: unexpected token `%s`\n", (state.token)->value);
     abort();
@@ -619,13 +646,14 @@ Node* parse(Token *token) {
   return node;
 }
 
+
 void node_pp(Node *node) {
   int size = 0;
   for (; node->children != NULL && node->children[size] != NULL; size++) ;
 
   if (size == 0) {
     const char *label;
-    if (node->type == NODE_PRIMITIVE_NUMBER || node->type == NODE_PRIMITIVE_BOOLEAN || node->type == NODE_IDENTIFIER) {
+    if (node->type == NODE_PRIMITIVE_NUMBER || node->type == NODE_PRIMITIVE_BOOLEAN || node->type == NODE_PRIMITIVE_STRING || node->type == NODE_IDENTIFIER) {
       label = node->value;
     } else {
       label = NodeTypeString[node->type];

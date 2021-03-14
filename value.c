@@ -231,13 +231,6 @@ Value* evaluate_node(Node *node, Env *env) {
           break;
         }
 
-        case NODE_BINARY_OPERATOR: {
-          Value *v = evaluate_node(left->children[0], env);
-          Value *property = value_string_new(left->children[1]->value);
-          value_object_set(v, property, right_value);
-          break;
-        }
-
         case NODE_OBJECT_MEMBER_ACCESS: {
           Value *v = evaluate_node(left->children[0], env);
           Value *property = evaluate_node(left->children[1], env);
@@ -304,13 +297,6 @@ Value* evaluate_node(Node *node, Env *env) {
 
       int size = 0;
       while(children[size] != NULL) size++;
-      if (strcmp(identifier, ".") == 0) {
-        Value *receiver = evaluate_node(node->children[0], env);
-        Node *message_node = node->children[1];
-        Value *message = value_string_new(message_node->value);
-
-        return value_object_get(receiver, message);
-      }
 
       Value **args = malloc(size * sizeof(Value));
       for (int i = 0; children[i] != NULL; i++) {
@@ -418,18 +404,12 @@ Value* evaluate_node(Node *node, Env *env) {
     case NODE_OBJECT_MEMBER_ACCESS: {
       Value *v = evaluate_node(node->children[0], env);
       Value *member = evaluate_node(node->children[1], env);
-
-      switch (v->kind) {
-        case VALUE_KIND_OBJECT: {
-          return value_object_get(v, member);
-        }
-
-        default: {
-          fprintf(stderr, "runtime error: unexpected member access: %s\n", value_inspect(v));
-          abort();
-        }
+      if (v->kind != VALUE_KIND_OBJECT) {
+        fprintf(stderr, "runtime error: unexpected member access: %s\n", value_inspect(v));
+        abort();
       }
-      return NULL;
+
+      return value_object_get(v, member);
     }
 
     case NODE_ARRAY: {
@@ -452,20 +432,6 @@ Value* evaluate_node(Node *node, Env *env) {
 
   return NULL;
 }
-// binding.this
-// binding.global
-// #object_create
-// ObjectPrototype = object_create(null)
-// Object = function(){}
-// Object.prototype = ObjectPrototype
-// Object.create = #object_create
-
-// Value* value_object_construct(Value *constructor) {
-//   Value *proto = value_object_get(constructor, value_string_new("prototype"));
-//   Value *new_object = value_object_create(proto);
-//   evaluate_function_call(constructor, NULL, 0, NULL);
-//   return new_object;
-// }
 
 Value* require_klass_object() {
   Value *klass = value_function_new(NULL);
