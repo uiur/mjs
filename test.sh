@@ -9,13 +9,31 @@ fail() {
   echo -e "${RED}test failed ($1):${RESET}"
 }
 
+pass() {
+  echo -e "${GREEN}test passed ($1)${RESET}"
+}
+
+echo "running c tests..."
+
+for path in $(ls build/*_test); do
+  $path 2>&1
+  exit_code=$?
+  if [[ $exit_code -ne 0 ]]; then
+    fail $path
+    echo "  program exited with $exit_code"
+    echo "  $path"
+    continue
+  fi
+  pass $path
+done
+
 echo "running tests..."
 echo
 for path in $(ls test/input/*.js); do
   name=$(basename "$path" .js)
   actual=$($executable $path)
   exit_code=$?
-  if [[ exit_code -ne 0 ]]; then
+  if [[ $exit_code -ne 0 ]]; then
     fail $path
     echo "  program exited with $exit_code"
     echo "  $executable $path"
@@ -28,6 +46,6 @@ for path in $(ls test/input/*.js); do
     echo "  expect: $expected"
     echo "  actual: $actual"
   else
-    echo -e "${GREEN}test passed ($path)${RESET}"
+    pass $path
   fi
 done
