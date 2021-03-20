@@ -60,7 +60,7 @@ void test_example() {
 
   eval("function add(a, b) { return a + b; } console.log(add(1, 2));");
   eval("function add(a, b) { return a + b; } var o; o = { plus: add }; console.log(o.plus(1, 2));");
-  // eval("var f = function (n) { return n }; f(42);");
+  eval("var f = function (n) { return n; }; f(42);");
   eval("if (1) { console.log(1); }");
   eval("if (1 < 2) { console.log(1 < 2); }");
   eval("for (var i = 0; i < 5; i = i + 1) {}");

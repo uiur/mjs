@@ -306,10 +306,9 @@ Value* evaluate_node(Node *node, Env *env) {
       return right_value;
     }
 
-    case NODE_FUNCTION_DECLARATION: {
+    case NODE_FUNCTION: {
       Value *v = value_function_new(node);
-      env_set(env, node->value, v);
-      break;
+      return v;
     }
 
     case NODE_STATEMENT_RETURN: {

@@ -18,7 +18,7 @@ $(DIR):
 .PHONY: all test test_run clean
 all: $(MAIN) $(TESTS)
 test: $(TESTS)
-test_run: test
+test_run: $(MAIN) test
 	./test.sh
 
 clean:

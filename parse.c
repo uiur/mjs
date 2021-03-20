@@ -148,6 +148,55 @@ Node* parse_reference(ParseState *state) {
   PARSE_BINARY_OPERATION(dot_symbols, parse_identifier)
 }
 
+Node* parse_function(ParseState *state, NodeType node_type) {
+  Token *head = state->token;
+  if (token_matches(head, TOKEN_KEYWORD, "function")) {
+    parse_state_next(state);
+
+    Node *identifier = parse_identifier(state);
+    char *function_name = "";
+    if (identifier != NULL) {
+      function_name = identifier->value;
+    }
+
+    parse_state_expect(state, "(");
+
+    Node *node = node_alloc(node_type, 0);
+    node->value = function_name;
+    int size = 0;
+    while (state->token->type == TOKEN_IDENTIFIER) {
+      size++;
+      node->args = realloc(node->args, (size + 1) * sizeof(Node*));
+      node->args[size] = NULL;
+
+      Node *argument = node_alloc(NODE_IDENTIFIER, 0);
+      Token *token = state->token;
+      argument->value = token->value;
+      node->args[size - 1] = argument;
+
+      parse_state_next(state);
+
+      if (!token_matches(state->token, TOKEN_ANY, ",")) break;
+      parse_state_next(state);
+    }
+
+    parse_state_expect(state, ")");
+
+    parse_state_expect(state, "{");
+
+    Node *statement_list = parse_statement_list(state);
+
+    node->children = statement_list->children;
+    free(statement_list);
+
+    parse_state_expect(state, "}");
+    return node;
+  }
+
+  return NULL;
+}
+
+
 Node* parse_function_call(ParseState *state, Node *callee) {
   if (!token_matches(state->token, TOKEN_SYMBOL, "(")) return NULL;
 
@@ -269,6 +318,9 @@ Node* parse_term(ParseState *state) {
   node = parse_reference(state);
   if (node != NULL) return node;
 
+  node = parse_function(state, NODE_FUNCTION);
+  if (node != NULL) return node;
+
   node = parse_object(state);
   if (node != NULL) return node;
 
@@ -373,51 +425,9 @@ Node* parse_return_statement(ParseState *state) {
   return NULL;
 }
 
+
 Node* parse_function_declaration(ParseState *state) {
-  Token *head = state->token;
-  if (token_matches(head, TOKEN_KEYWORD, "function")) {
-    parse_state_next(state);
-
-    EXPECT_TOKEN_TYPE(head->next, TOKEN_IDENTIFIER);
-    Token *function_name = head->next;
-    parse_state_next(state);
-
-    parse_state_expect(state, "(");
-
-    Node *node = node_alloc(NODE_FUNCTION_DECLARATION, 0);
-    node->value = function_name->value;
-    int size = 0;
-    while (state->token->type == TOKEN_IDENTIFIER) {
-      size++;
-      node->args = realloc(node->args, (size + 1) * sizeof(Node*));
-      node->args[size] = NULL;
-
-      Node *argument = node_alloc(NODE_IDENTIFIER, 0);
-      Token *token = state->token;
-      argument->value = token->value;
-      node->args[size - 1] = argument;
-
-      parse_state_next(state);
-
-      if (!token_matches(state->token, TOKEN_ANY, ",")) break;
-      parse_state_next(state);
-    }
-
-    parse_state_expect(state, ")");
-
-    parse_state_expect(state, "{");
-
-    Node *statement_list = parse_statement_list(state);
-
-    node->children = statement_list->children;
-    free(statement_list);
-
-
-    parse_state_expect(state, "}");
-    return node;
-  }
-
-  return NULL;
+  return parse_function(state, NODE_FUNCTION_DECLARATION);
 }
 
 Node* parse_variable_declaration_statement(ParseState *state) {
@@ -660,6 +670,20 @@ Node* transform(Node *node) {
       }
 
       return node;
+    }
+
+    case NODE_FUNCTION_DECLARATION: {
+      Node *new_node = node_alloc(NODE_VAR_DECLARATION, 2);
+
+      Node *identifier = node_alloc(NODE_IDENTIFIER, 0);
+      identifier->value = node->value;
+      new_node->value = node->value;
+
+      new_node->children[0] = identifier;
+      node->type = NODE_FUNCTION;
+      new_node->children[1] = node;
+
+      return new_node;
     }
 
     default: {
