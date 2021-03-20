@@ -136,7 +136,7 @@ Value* native_console_log(Value *this, int size, Value **args) {
 
 void assert_args_size(int size, int expected) {
   if (size != expected) {
-    fprintf(stderr, "requires %d arguments, but %d\n", expected, size);
+    RUNTIME_ERROR("requires %d arguments, but %d\n", expected, size);
     abort();
   }
 }
