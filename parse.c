@@ -8,8 +8,8 @@
 
 #define EXPECT_TOKEN_TYPE(TOKEN, TYPE) if ((TOKEN)->type != TYPE) { fprintf(stderr, "expect token type %s, but got %s\n", #TYPE, NodeTypeString[(TOKEN)->type]); abort(); }
 
-#define PARSE_BINARY_OPERATION(SYMBOLS, NEXT) \
-  Node *node = NEXT(state); \
+#define PARSE_BINARY_OPERATION(SYMBOLS, LEFT_NEXT, RIGHT_NEXT) \
+  Node *node = LEFT_NEXT(state); \
   while (state->token != NULL && token_matches_any(state->token, TOKEN_SYMBOL, SYMBOLS)) { \
     char *symbol = state->token->value; \
     parse_state_next(state); \
@@ -18,7 +18,7 @@
     node = node_alloc(NODE_BINARY_OPERATOR, 2); \
     node->value = symbol; \
     node->children[0] = left; \
-    node->children[1] = NEXT(state); \
+    node->children[1] = RIGHT_NEXT(state); \
   } \
   return node;
 
@@ -72,6 +72,7 @@ void parse_state_expect(ParseState *state, char *str) {
 }
 
 Node* parse_expression(ParseState *state);
+Node* parse_term(ParseState *state);
 
 Node* parse_identifier(ParseState *state) {
   if (state->token->type == TOKEN_IDENTIFIER) {
@@ -143,10 +144,6 @@ Node* parse_primary(ParseState *state) {
   return NULL;
 }
 
-const char *dot_symbols[] =  { ".", NULL };
-Node* parse_reference(ParseState *state) {
-  PARSE_BINARY_OPERATION(dot_symbols, parse_identifier)
-}
 
 Node* parse_function(ParseState *state, NodeType node_type) {
   Token *head = state->token;
@@ -315,9 +312,6 @@ Node* parse_variable_assignment(ParseState *state, Node *left) {
 
 Node* parse_term(ParseState *state) {
   Node *node;
-  node = parse_reference(state);
-  if (node != NULL) return node;
-
   node = parse_function(state, NODE_FUNCTION);
   if (node != NULL) return node;
 
@@ -327,14 +321,26 @@ Node* parse_term(ParseState *state) {
   node = parse_array(state);
   if (node != NULL) return node;
 
+  node = parse_identifier(state);
+  if (node != NULL) return node;
+
   node = parse_primary(state);
   if (node != NULL) return node;
 
   return NULL;
 }
 
+const char *dot_symbols[] =  { ".", NULL };
+Node* parse_reference(ParseState *state) {
+  PARSE_BINARY_OPERATION(dot_symbols, parse_term, parse_identifier)
+}
+
+Node* parse_term_reference(ParseState *state) {
+  PARSE_BINARY_OPERATION(dot_symbols, parse_term, parse_identifier)
+}
+
 Node* parse_term_function_call(ParseState *state) {
-  Node *node = parse_term(state);
+  Node *node = parse_term_reference(state);
 
   Node *function_call;
   while (1) {
@@ -391,17 +397,17 @@ Node* parse_variable_assignment_operation(ParseState *state) {
 
 const char *multiplicative_symbols[] =  { "*", "/", NULL };
 Node* parse_multiplicative_operation(ParseState *state) {
-  PARSE_BINARY_OPERATION(multiplicative_symbols, parse_variable_assignment_operation)
+  PARSE_BINARY_OPERATION(multiplicative_symbols, parse_variable_assignment_operation, parse_variable_assignment_operation)
 }
 
 const char *additive_symbols[] =  { "+", "-", NULL };
 Node* parse_additive_operation(ParseState *state) {
-  PARSE_BINARY_OPERATION(additive_symbols, parse_multiplicative_operation)
+  PARSE_BINARY_OPERATION(additive_symbols, parse_multiplicative_operation, parse_multiplicative_operation)
 }
 
 const char *equality_symbols[] =  { "===", ">", "<", NULL };
 Node* parse_equality_operation(ParseState *state) {
-  PARSE_BINARY_OPERATION(equality_symbols, parse_additive_operation)
+  PARSE_BINARY_OPERATION(equality_symbols, parse_additive_operation, parse_additive_operation)
 }
 
 Node* parse_expression(ParseState *state) {
